@@ -1,10 +1,8 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
 import './App.css'
 
-import Home from './pages/Home'
-import Editor from './pages/Editor'
-import Help from './pages/Help'
-import Pricing from './pages/Pricing'
+import Home from './pages/Home.tsx'
+import Editor from './pages/Editor.tsx'
 
 function Navbar() {
   return (
@@ -13,8 +11,7 @@ function Navbar() {
       <div className="links">
         <NavLink to="/" className={({ isActive }) => isActive ? 'active' : ''}>Home</NavLink>
         <NavLink to="/editor" className={({ isActive }) => isActive ? 'active' : ''}>Editor</NavLink>
-        <NavLink to="/help" className={({ isActive }) => isActive ? 'active' : ''}>Help</NavLink>
-        <NavLink to="/pricing" className={({ isActive }) => isActive ? 'active' : ''}>Pricing</NavLink>
+        {/* Help e Pricing rimossi dall'editor */}
       </div>
     </nav>
   )
@@ -27,8 +24,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/editor" element={<Editor />} />
-        <Route path="/help" element={<Help />} />
-        <Route path="/pricing" element={<Pricing />} />
+        {/* Route Help/Pricing rimosse */}
       </Routes>
     </BrowserRouter>
   )

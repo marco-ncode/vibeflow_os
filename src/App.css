@@ -44,16 +44,16 @@ body {
 .price { font-size: 24px; font-weight: 700; }
 
 .editor { height: calc(100vh - 60px); display: flex; flex-direction: column; }
-.toolbar { padding: 8px; border-bottom: 1px solid #1f2937; background: var(--panel); display: flex; gap: 8px; }
+.toolbar { padding: 8px; border-bottom: 1px solid #1f2937; background: var(--panel); display: flex; gap: 8px; justify-content: space-between; }
 .workspace { display: grid; grid-template-columns: 220px 1fr 280px; gap: 8px; height: 100%; }
 .sidebar { background: var(--panel); border-right: 1px solid #1f2937; padding: 12px; }
 .properties { background: var(--panel); border-left: 1px solid #1f2937; padding: 12px; overflow: auto; }
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
 .field input, .field textarea, .field select { background: #0b1220; color: var(--text); border: 1px solid #374151; border-radius: 8px; padding: 8px; }
-.canvas { flex: 1; }
+.canvas { flex: 1; position: relative; }
 
 .node { padding: 8px 10px; border-radius: 10px; border: 1px solid #334155; background: #0b1220; color: var(--text); min-width: 140px; }
-.node .node-title { font-weight: 700; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.node .node-title { font-weight: 700; font-size: 12px; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
 .node .label { font-size: 13px; margin-bottom: 6px; }
 .node .desc { font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .node.prompt { border-color: #7c3aed; }
@@ -63,3 +63,62 @@ body {
 .node.decision { border-color: #ef4444; }
 .node.api { border-color: #06b6d4; }
 .node.storage { border-color: #84cc16; }
+
+/* Connessioni (lista input/output) */
+.conn-list { display: flex; flex-direction: column; gap: 8px; }
+.conn-item { display: flex; align-items: center; gap: 8px; }
+.conn-item input { flex: 1; }
+.btn.danger { background: #3b0a0a; border-color: #7f1d1d; color: #fecaca; }
+
+/* Menu a scomparsa */
+.menu-panel {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  background: var(--panel);
+  border: 1px solid #1f2937;
+  border-radius: 16px;
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+  z-index: 10;
+}
+.menu-header { display: flex; align-items: center; justify-content: space-between; }
+.menu-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+.menu-close:hover { background: #0f172a; color: var(--text); }
+.menu-panel .menu-title { font-weight: 700; color: var(--muted); }
+.btn.big {
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+/* Floating action icon */
+.vibe-fab {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #1f2937;
+  background: #0b1220;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 9;
+}
+.vibe-fab:hover { background: #0f172a; }
+
+.node .node-title .icon { display: inline-block; }
+.node .node-title .toggle { margin-left: auto; font-size: 12px; padding: 2px 6px; border: 1px solid #374151; border-radius: 6px; background: #0b1220; color: var(--muted); cursor: pointer; }
