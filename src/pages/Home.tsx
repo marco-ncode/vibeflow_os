@@ -2,14 +2,12 @@ function Home() {
   return (
     <div className="container">
       <header className="hero">
-        <h1>VibeFlow — Visual Node Editor per SaaS</h1>
+        <h1>VibeFlow - Il builder visivo per i prompt di vibe code!</h1>
         <p>
-          Disegna flussi complessi con blocchi visuali, esporta JSON AI‑ready e integra
-          rapidamente nel tuo editor di codice.
+          Disegna flussi complessi con blocchi visuali, esporta JSON AI‑ready e integrali rapidamente nel tuo editor di codice o nella tua app di vibe coding.
         </p>
         <div className="actions">
           <a className="btn primary" href="/editor">Apri Editor</a>
-          <a className="btn" href="/help">Guida</a>
         </div>
       </header>
       <section className="features">
