@@ -9,6 +9,8 @@ import IONode from '../components/nodes/IONode'
 import DecisionNode from '../components/nodes/DecisionNode'
 import ApiNode from '../components/nodes/ApiNode'
 import StorageNode from '../components/nodes/StorageNode'
+import GroupNode from '../components/nodes/GroupNode'
+import TableNode from '../components/nodes/TableNode'
 import NodePalette from '../components/NodePalette'
 
 function Editor() {
@@ -40,10 +42,13 @@ function Editor() {
     setEdges(addEdge(connection as Edge, edges))
   }, [edges, setEdges])
 
-  const nodeTypes = { prompt: PromptNode, transform: TransformNode, io: IONode, decision: DecisionNode, api: ApiNode, storage: StorageNode }
+  const nodeTypes = { prompt: PromptNode, transform: TransformNode, io: IONode, decision: DecisionNode, api: ApiNode, storage: StorageNode, table: TableNode, group: GroupNode }
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   const onSelectionChange = useCallback(({ nodes: selNodes }: { nodes: Node[]; edges: Edge[] }) => {
     setSelectedNodeId(selNodes[0]?.id ?? null)
+    setSelectedIds(selNodes.map((n) => n.id))
   }, [setSelectedNodeId])
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId)
@@ -65,27 +70,116 @@ function Editor() {
   }
 
   const buildAiPrompt = () => {
-    const lines: string[] = []
-    lines.push('# VibeFlow AI Prompt')
-    nodes.forEach((n) => {
-      lines.push(`- Node: ${n.data?.label ?? n.id} [type=${n.type}]`)
-      if (n.type === 'prompt' && n.data?.prompt) lines.push(`  Prompt: ${String(n.data.prompt)}`)
-      if (n.type === 'transform' && n.data?.operation) lines.push(`  Operation: ${String(n.data.operation)}`)
-      if (n.type === 'decision' && n.data?.condition) lines.push(`  Condition: ${String(n.data.condition)}`)
-      if (n.type === 'api' && n.data?.endpoint) lines.push(`  Endpoint: ${String(n.data.endpoint)}`)
-      if (n.type === 'storage' && n.data?.resource) lines.push(`  Resource: ${String(n.data.resource)}`)
-      const ins = (n.data?.inputs ?? []).map((i: any) => i.name).join(', ')
-      const outs = (n.data?.outputs ?? []).map((o: any) => o.name).join(', ')
-      if (ins) lines.push(`  Inputs: ${ins}`)
-      if (outs) lines.push(`  Outputs: ${outs}`)
-      if (n.data?.description) lines.push(`  Description: ${String(n.data.description)}`)
-    })
-    lines.push('')
-    lines.push('# Connections')
-    edges.forEach((e) => {
-      lines.push(`- ${e.source}:${e.sourceHandle ?? ''} -> ${e.target}:${e.targetHandle ?? ''}`)
-    })
-    return lines.join('\n')
+    return `# 🧠 Visual Logic Graph → Code Generator
+
+You are an expert **code generation model** specialized in **translating visual logic graphs into working programs**.
+
+You will receive a JSON file (\`vibeflow.json\`) describing a **visual logic graph**, which defines a complete program through interconnected nodes.
+
+---
+
+## 1️⃣ Understanding the Input Structure
+
+The JSON defines:
+
+### 🧩 Nodes
+Discrete functional units, each containing:
+
+- \`id\`: unique identifier  
+- \`name\`: descriptive label  
+- \`description\`: detailed purpose or intended behavior  
+- \`inputs\`: expected data or parameters (typed, named)  
+- \`outputs\`: emitted data or results (typed, named)  
+- *(optional)* \`imageDescription\`: textual explanation of an associated image  
+- *(optional)* \`img\`: path(s) to one or more images (e.g. \`img/{node_id}/...\`) providing **visual references, layouts, or mockups**
+
+### 🔗 Connections
+Define data flow by linking **outputs** of one node to **inputs** of another.
+
+---
+
+## 2️⃣ Your Core Objectives
+
+When provided with the JSON:
+
+1. **Parse and understand** all nodes and their relationships.  
+2. **Infer the complete logical flow** of the program by analyzing connections.  
+3. **Derive the correct data propagation** respecting input/output dependencies.  
+4. **Incorporate visual context** from any \`imageDescription\` or image files.  
+5. **Generate a coherent, functional program** implementing the described logic.
+
+---
+
+## 3️⃣ Output Requirements
+
+Produce a **single, runnable code file** that:
+
+- Implements the **entire data flow** defined in the graph.  
+- Selects the **appropriate environment and language** (e.g. web app, Python script, Node.js) based on node descriptions or explicit hints.  
+- Includes:
+
+  - Logical decomposition into **functions or components** reflecting the node structure  
+  - Correct **data flow** and event propagation  
+  - Implementation of: 
+    - **Input nodes** → user or system data sources  
+    - **Processing nodes** → transformations, logic, or computation  
+    - **Output nodes** → UI, console, API calls, or results delivery  
+  - Integration of **visual designs** or **layouts** when image context is provided  
+  - **Clear, instructive comments** explaining: 
+    - Each node’s purpose  
+    - How data flows between nodes  
+    - How visuals influence the layout or logic  
+
+---
+
+## 4️⃣ Reasoning Protocol
+
+Before generating code:
+
+1. **Parse** the JSON structure.  
+2. Produce an **internal understanding summary** with: 
+   - Node list and inferred roles  
+   - Connection mapping (source → target)  
+   - Execution or dependency order  
+3. If any ambiguity exists (e.g., unclear purpose, missing types, unspecified language), **ask clarifying questions** first.  
+4. Once clarified, **generate the final, fully functional implementation**.
+
+---
+
+## 5️⃣ Quality Expectations
+
+Your generated code must be:
+
+- 🧠 **Logically sound** — all data dependencies respected.  
+- 🧩 **Readable & maintainable** — modular, clean structure.  
+- 🎨 **Visually consistent** — follows any provided design cues.  
+- ⚙️ **Executable** — runs without errors in the inferred environment.
+
+---
+
+## 6️⃣ Input File
+
+The visual logic graph is provided in: vibeflow.json
+
+You must: 
+1. Load and analyze the JSON.  
+2. Construct and output the **complete working program** that it defines.
+
+---
+
+### ✅ Instruction Summary
+
+> **Read the graph → Interpret nodes + connections + visuals → Generate a working program → Comment key logic + visuals**
+
+---
+
+## ✨ Notes
+
+- Always **prioritize comprehension before code generation**.  
+- Focus on **data flow integrity** and **semantic correctness** of node relationships.  
+- Be explicit and consistent in variable naming and function roles.  
+- Treat any \`imageDescription\` as **a binding design specification**, not decorative.  
+- Output **runnable, production-quality code** suitable for direct execution or integration.`
   }
 
   const handleExportJSON = () => downloadFile('vibeflow.json', exportJson(), 'application/json')
@@ -120,10 +214,76 @@ function Editor() {
     reader.readAsText(file)
   }
 
+  // --- Grouping helpers ---
+  const createGroupFromSelection = () => {
+    if (selectedIds.length < 2) return
+    const selected = nodes.filter((n) => selectedIds.includes(n.id) && n.type !== 'group')
+    if (selected.length < 2) return
+    const getW = (n: Node) => (typeof (n as any).width === 'number' ? (n as any).width : 160)
+    const getH = (n: Node) => (typeof (n as any).height === 'number' ? (n as any).height : 90)
+    const minX = Math.min(...selected.map((n) => n.position.x))
+    const minY = Math.min(...selected.map((n) => n.position.y))
+    const maxX = Math.max(...selected.map((n) => n.position.x + getW(n)))
+    const maxY = Math.max(...selected.map((n) => n.position.y + getH(n)))
+    const padding = 24
+    const groupPosition = { x: minX - padding, y: minY - padding }
+    const groupWidth = maxX - minX + padding * 2
+    const groupHeight = maxY - minY + padding * 2
+    const groupId = `group-${Date.now()}`
+
+    const groupNode: Node = {
+      id: groupId,
+      type: 'group',
+      position: groupPosition,
+      selectable: true,
+      draggable: true,
+      data: { label: `Group ${new Date().toLocaleTimeString()}`, width: groupWidth, height: groupHeight },
+    }
+
+    // Move selected nodes inside the group (typed as Node[] and extent literal)
+    const updatedChildren: Node[] = selected.map((n): Node => ({
+      ...n,
+      position: { x: n.position.x - groupPosition.x, y: n.position.y - groupPosition.y },
+      parentNode: groupId,
+      extent: 'parent' as const,
+    }))
+
+    // Keep non-selected nodes as they are
+    const others = nodes.filter((n) => !selectedIds.includes(n.id))
+
+    setNodes([groupNode, ...others, ...updatedChildren])
+    setSelectedNodeId(groupId)
+  }
+
+  const deleteGroupOnly = (group: Node) => {
+    if (group.type !== 'group') return
+    const children = nodes.filter((n) => n.parentNode === group.id)
+    const shiftedChildren = children.map((n) => ({
+      ...n,
+      parentNode: undefined,
+      extent: undefined,
+      position: { x: n.position.x + group.position.x, y: n.position.y + group.position.y },
+    }))
+    const remaining = nodes.filter((n) => n.id !== group.id && n.parentNode !== group.id)
+    setNodes([...remaining, ...shiftedChildren])
+    setSelectedNodeId(null)
+  }
+
+  const deleteGroupAndContent = (group: Node) => {
+    if (group.type !== 'group') return
+    const childIds = new Set(nodes.filter((n) => n.parentNode === group.id).map((n) => n.id))
+    const remainingNodes = nodes.filter((n) => n.id !== group.id && !childIds.has(n.id))
+    const remainingEdges = edges.filter((e) => !childIds.has(e.source) && !childIds.has(e.target))
+    setNodes(remainingNodes)
+    setEdges(remainingEdges)
+    setSelectedNodeId(null)
+  }
+
   return (
     <div className="editor">
       <div className="toolbar">
         <button className="btn" onClick={reset}>Reset</button>
+        <button className="btn" disabled={selectedIds.length < 2} onClick={createGroupFromSelection}>Crea Gruppo dai selezionati</button>
       </div>
       <div className="workspace">
         <NodePalette />
@@ -185,6 +345,15 @@ function Editor() {
                   onChange={(e) => updateNodeData(selectedNode.id, { label: e.target.value })}
                 />
               </div>
+              {selectedNode.type === 'group' && (
+                <div className="field">
+                  <label>Azioni Gruppo</label>
+                  <div className="conn-list">
+                    <button className="btn" onClick={() => deleteGroupOnly(selectedNode)}>Delete Group</button>
+                    <button className="btn danger" onClick={() => deleteGroupAndContent(selectedNode)}>Delete Group and Content</button>
+                  </div>
+                </div>
+              )}
               <div className="field">
                 <label>Descrizione</label>
                 <textarea

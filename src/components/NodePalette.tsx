@@ -13,6 +13,7 @@ function NodePalette() {
       <button className="btn" onClick={() => addNodeOfType('decision')}>Aggiungi Decision</button>
       <button className="btn" onClick={() => addNodeOfType('api')}>Aggiungi API</button>
       <button className="btn" onClick={() => addNodeOfType('storage')}>Aggiungi Storage</button>
+      <button className="btn" onClick={() => addNodeOfType('table')}>Aggiungi Tabella</button>
     </div>
   )
 }

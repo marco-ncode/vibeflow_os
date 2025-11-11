@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Node, Edge } from 'reactflow'
 
-type NodeKind = 'prompt' | 'transform' | 'io' | 'decision' | 'api' | 'storage'
+type NodeKind = 'prompt' | 'transform' | 'io' | 'decision' | 'api' | 'storage' | 'table'
 
 type GraphState = {
   nodes: Node[]
@@ -41,6 +41,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       : kind === 'decision' ? 'Decision'
       : kind === 'api' ? 'API'
       : kind === 'storage' ? 'Storage'
+      : kind === 'table' ? 'Table'
       : (initialData?.['direction'] === 'output' ? 'Output' : 'Input')
     const newNode: Node = {
       id,
@@ -114,6 +115,67 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   reset: () => set({ nodes: initialNodes, edges: initialEdges, selectedNodeId: null }),
   exportJson: () => {
     const { nodes, edges } = get()
-    return JSON.stringify({ nodes, edges }, null, 2)
+
+    const toMaybeNumber = (v: string | number): string | number => {
+      if (typeof v === 'number') return v
+      const n = Number(v)
+      return Number.isFinite(n) ? n : v
+    }
+
+    const nodeItems = nodes
+      .filter((n) => n.type !== 'group')
+      .map((n) => ({
+        id: toMaybeNumber(n.id),
+        name: String(n.data?.label ?? n.id),
+        description: String(n.data?.description ?? ''),
+        inputs: (n.data?.inputs ?? []).map((i: any) => ({ id: i.id, name: String(i.name ?? '') })),
+        outputs: (n.data?.outputs ?? []).map((o: any) => ({ id: o.id, name: String(o.name ?? '') })),
+        images: [],
+        imageDescription: '',
+      }))
+
+    const connections = edges.map((e) => {
+      const src = nodes.find((n) => n.id === e.source)
+      const dst = nodes.find((n) => n.id === e.target)
+      const out = (src?.data?.outputs ?? []).find((o: any) => o.id === e.sourceHandle)
+      const inp = (dst?.data?.inputs ?? []).find((i: any) => i.id === e.targetHandle)
+      return {
+        from: {
+          nodeId: toMaybeNumber(e.source as any),
+          outputId: e.sourceHandle ?? '',
+          outputName: String(out?.name ?? ''),
+        },
+        to: {
+          nodeId: toMaybeNumber(e.target as any),
+          inputId: e.targetHandle ?? '',
+          inputName: String(inp?.name ?? ''),
+        },
+      }
+    })
+
+    const groups = nodes
+      .filter((n) => n.type === 'group')
+      .map((g) => ({
+        id: toMaybeNumber(g.id),
+        name: String(g.data?.label ?? 'Group'),
+        description: String(g.data?.description ?? ''),
+        nodeIds: nodes
+          .filter((n) => n.parentNode === g.id)
+          .map((n) => toMaybeNumber(n.id)),
+      }))
+
+    const result = {
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        nodeCount: nodeItems.length,
+        connectionCount: connections.length,
+        groupCount: groups.length,
+      },
+      nodes: nodeItems,
+      connections,
+      groups,
+    }
+
+    return JSON.stringify(result, null, 2)
   },
 }))
