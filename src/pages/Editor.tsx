@@ -331,16 +331,22 @@ ${json}
     if (selectedIds.length < 2) return
     const selected = nodes.filter((n) => selectedIds.includes(n.id) && n.type !== 'group')
     if (selected.length < 2) return
-    const getW = (n: Node) => (typeof (n as any).width === 'number' ? (n as any).width : 160)
-    const getH = (n: Node) => (typeof (n as any).height === 'number' ? (n as any).height : 90)
+    const getW = (n: Node) => {
+      const w = (n as any).width
+      return typeof w === 'number' && w > 0 ? w : 160
+    }
+    const getH = (n: Node) => {
+      const h = (n as any).height
+      return typeof h === 'number' && h > 0 ? h : 90
+    }
     const minX = Math.min(...selected.map((n) => n.position.x))
     const minY = Math.min(...selected.map((n) => n.position.y))
     const maxX = Math.max(...selected.map((n) => n.position.x + getW(n)))
     const maxY = Math.max(...selected.map((n) => n.position.y + getH(n)))
     const padding = 24
     const groupPosition = { x: minX - padding, y: minY - padding }
-    const groupWidth = maxX - minX + padding * 2
-    const groupHeight = maxY - minY + padding * 2
+    const groupWidth = Math.max(160, maxX - minX + padding * 2)
+    const groupHeight = Math.max(120, maxY - minY + padding * 2)
     const groupId = `group-${Date.now()}`
 
     const groupNode: Node = {
@@ -408,6 +414,8 @@ ${json}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onSelectionChange={onSelectionChange}
+            selectionOnDrag
+            multiSelectionKeyCode="Shift"
             fitView
           >
             <MiniMap />
