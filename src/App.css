@@ -71,6 +71,7 @@ body {
 
 .editor { height: calc(100vh - 60px); display: flex; flex-direction: column; }
 .toolbar { padding: 8px; border-bottom: 1px solid var(--border); background: var(--panel); display: flex; gap: 8px; justify-content: space-between; }
+.toolbar .toolbar-note { color: var(--muted); font-size: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; }
 .workspace { display: grid; grid-template-columns: 220px 1fr 280px; gap: 8px; height: 100%; }
 .sidebar { background: var(--panel); border-right: 1px solid var(--border); padding: 12px; }
 .properties { background: var(--panel); border-left: 1px solid var(--border); padding: 12px; overflow: auto; }
@@ -80,8 +81,8 @@ body {
 
 .node { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border-node); background: var(--surface); color: var(--text); min-width: 140px; }
 .node .node-title { font-weight: 700; font-size: 12px; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
-.node .label { font-size: 13px; margin-bottom: 6px; }
-.node .desc { font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.node .label { font-size: 13px; margin-bottom: 6px; max-width: 64ch; overflow-wrap: break-word; word-break: break-word; }
+.node .desc { font-size: 12px; color: var(--muted); max-width: 64ch; overflow-wrap: break-word; word-break: break-word; }
 .node.prompt { border-color: #7c3aed; }
 .node.transform { border-color: #22c55e; }
 .node.io.input { border-color: #3b82f6; }

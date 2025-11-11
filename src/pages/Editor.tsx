@@ -343,10 +343,18 @@ ${json}
     const minY = Math.min(...selected.map((n) => n.position.y))
     const maxX = Math.max(...selected.map((n) => n.position.x + getW(n)))
     const maxY = Math.max(...selected.map((n) => n.position.y + getH(n)))
-    const padding = 24
-    const groupPosition = { x: minX - padding, y: minY - padding }
-    const groupWidth = Math.max(160, maxX - minX + padding * 2)
-    const groupHeight = Math.max(120, maxY - minY + padding * 2)
+    // Applico il margine su entrambi gli assi:
+    // - X: +10% per area di manovra
+    // - Y: +25% (15% titolo + 10% manovra)
+    const rawWidth = maxX - minX
+    const rawHeight = maxY - minY
+    const marginFactorX = 0.10
+    const marginFactorY = 0.25
+    const extraX = rawWidth * marginFactorX / 2
+    const extraY = rawHeight * marginFactorY / 2
+    const groupPosition = { x: minX - extraX, y: minY - extraY }
+    const groupWidth = Math.max(160, Math.round(rawWidth * (1 + marginFactorX)))
+    const groupHeight = Math.max(120, Math.round(rawHeight * (1 + marginFactorY)))
     const groupId = `group-${Date.now()}`
 
     const groupNode: Node = {
@@ -356,6 +364,9 @@ ${json}
       selectable: true,
       draggable: true,
       data: { label: `Group ${new Date().toLocaleTimeString()}`, width: groupWidth, height: groupHeight },
+      selected: true,
+      // Imposto dimensioni direttamente sul wrapper del nodo per un extent corretto
+      style: { width: groupWidth, height: groupHeight },
     }
 
     // Move selected nodes inside the group (typed as Node[] and extent literal)
@@ -364,6 +375,7 @@ ${json}
       position: { x: n.position.x - groupPosition.x, y: n.position.y - groupPosition.y },
       parentNode: groupId,
       extent: 'parent' as const,
+      selected: false,
     }))
 
     // Keep non-selected nodes as they are
@@ -371,6 +383,7 @@ ${json}
 
     setNodes([groupNode, ...others, ...updatedChildren])
     setSelectedNodeId(groupId)
+    setSelectedIds([groupId])
   }
 
   const deleteGroupOnly = (group: Node) => {
@@ -401,6 +414,7 @@ ${json}
     <div className="editor">
       <div className="toolbar">
         <button className="btn" onClick={reset}>Reset</button>
+        <div className="toolbar-note">Per selezionare più nodi tieni premuto <strong>SHIFT</strong></div>
         <button className="btn" disabled={selectedIds.length < 2} onClick={createGroupFromSelection}>Crea Gruppo dai selezionati</button>
       </div>
       <div className="workspace">
