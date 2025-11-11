@@ -186,12 +186,124 @@ You must:
   const handleCopyJSON = () => copyToClipboard(exportJson())
   const handleExportPrompt = () => downloadFile('vibeflow-prompt.txt', buildAiPrompt())
   const handleCopyPrompt = () => copyToClipboard(buildAiPrompt())
+  const buildCombinedTemplate = () => {
+    const json = exportJson()
+    return `# 🧠 Visual Logic Graph → Code Generator
+
+You are an expert **code generation model** specialized in **translating visual logic graphs into working programs**.
+
+You will be provided with a **JSON object** that describes a **visual logic graph** — a structured representation of a complete program built from interconnected nodes.
+
+---
+
+## 1️⃣ Understanding the Input Structure
+
+The JSON defines:
+
+### 🧩 Nodes
+Discrete functional units, each containing:
+
+- \`id\`: unique identifier  
+- \`name\`: descriptive label  
+- \`description\`: detailed purpose or intended behavior  
+- \`inputs\`: expected data or parameters (typed, named)  
+- \`outputs\`: emitted data or results (typed, named)  
+- *(optional)* \`imageDescription\`: textual explanation of an associated image  
+- *(optional)* \`img\`: path(s) to one or more images (e.g. \`img/{node_id}/...\`) providing **visual references, layouts, or mockups**
+
+### 🔗 Connections
+Define data flow by linking **outputs** of one node to **inputs** of another.
+
+---
+
+## 2️⃣ Your Core Objectives
+
+When provided with the JSON:
+
+1. **Parse and understand** all nodes and their relationships.  
+2. **Infer the complete logical flow** of the program by analyzing connections.  
+3. **Derive the correct data propagation** respecting input/output dependencies.  
+4. **Incorporate visual context** from any \`imageDescription\` or image files.  
+5. **Generate a coherent, functional program** implementing the described logic.
+
+---
+
+## 3️⃣ Output Requirements
+
+Produce a **single, runnable code file** that:
+
+- Implements the **entire data flow** defined in the graph.  
+- Selects the **appropriate environment and language** (e.g. web app, Python script, Node.js) based on node descriptions or explicit hints.  
+- Includes:
+
+  - Logical decomposition into **functions or components** reflecting the node structure  
+  - Correct **data flow** and event propagation  
+  - Implementation of: 
+    - **Input nodes** → user or system data sources  
+    - **Processing nodes** → transformations, logic, or computation  
+    - **Output nodes** → UI, console, API calls, or results delivery  
+  - Integration of **visual designs** or **layouts** when image context is provided  
+  - **Clear, instructive comments** explaining: 
+    - Each node’s purpose  
+    - How data flows between nodes  
+    - How visuals influence the layout or logic  
+
+---
+
+## 4️⃣ Reasoning Protocol
+
+Before generating code:
+
+1. **Parse** the JSON structure.  
+2. Produce an **internal understanding summary** with: 
+   - Node list and inferred roles  
+   - Connection mapping (source → target)  
+   - Execution or dependency order  
+3. If any ambiguity exists (e.g., unclear purpose, missing types, unspecified language), **ask clarifying questions** first.  
+4. Once clarified, **generate the final, fully functional implementation**.
+
+---
+
+## 5️⃣ Quality Expectations
+
+Your generated code must be:
+
+- 🧠 **Logically sound** — all data dependencies respected.  
+- 🧩 **Readable & maintainable** — modular, clean structure.  
+- 🎨 **Visually consistent** — follows any provided design cues.  
+- ⚙️ **Executable** — runs without errors in the inferred environment.
+
+---
+
+## 6️⃣ Visual Logic Graph (Input JSON)
+
+Here is the JSON representation of the visual logic graph:
+
+\`\`\`json
+${json}
+\`\`\`
+
+### ✅ Instruction Summary
+
+> **Read the graph → Interpret nodes + connections + visuals → Generate a working program → Comment key logic + visuals**
+
+---
+
+## ✨ Notes
+
+- Always **prioritize comprehension before code generation**. 
+- Focus on **data flow integrity** and **semantic correctness** of node relationships. 
+- Be explicit and consistent in variable naming and function roles. 
+- Treat any \`imageDescription\` as **a binding design specification**, not decorative. 
+- Output **runnable, production-quality code** suitable for direct execution or integration.`
+  }
+
   const handleExportCombined = () => {
-    const combined = `=== AI PROMPT ===\n${buildAiPrompt()}\n\n=== JSON ===\n${exportJson()}`
+    const combined = buildCombinedTemplate()
     downloadFile('vibeflow-combined.txt', combined)
   }
   const handleCopyCombined = () => {
-    const combined = `=== AI PROMPT ===\n${buildAiPrompt()}\n\n=== JSON ===\n${exportJson()}`
+    const combined = buildCombinedTemplate()
     copyToClipboard(combined)
   }
   const handleExportPackage = () => {
