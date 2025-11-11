@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import { useCallback, useState } from 'react'
 import ReactFlow, { Background, Controls, addEdge, MiniMap, applyNodeChanges, applyEdgeChanges } from 'reactflow'
 import type { Connection, Edge, Node, OnConnect, NodeChange, EdgeChange } from 'reactflow'
 import 'reactflow/dist/style.css'

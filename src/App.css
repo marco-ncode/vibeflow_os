@@ -81,7 +81,7 @@ body {
 .node { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border-node); background: var(--surface); color: var(--text); min-width: 140px; }
 .node .node-title { font-weight: 700; font-size: 12px; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
 .node .label { font-size: 13px; margin-bottom: 6px; }
-.node .desc { font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.node .desc { font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .node.prompt { border-color: #7c3aed; }
 .node.transform { border-color: #22c55e; }
 .node.io.input { border-color: #3b82f6; }
