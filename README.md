@@ -89,10 +89,90 @@ Questo repository contiene:
 Il reverse proxy espone tutto su `http://localhost:3000`:
 
 - `GET/POST /api/*` → setup service (es. `/api/setup/status`, `/api/setup/init`)
+- `/supabase/*` → Supabase (via Kong) (es. `/supabase/auth/v1`, `/supabase/rest/v1`)
 - `/*` → webapp
-- `/*` → Supabase è pubblicato sotto `/supabase/*` (es. `/supabase/auth/v1`, `/supabase/rest/v1`)
 
-Configurazione: [Caddyfile](file:///Users/n4zgul/Documents/vibeflow/Caddyfile)
+Configurazione: [Caddyfile](./Caddyfile)
+
+### Guida: configurare Caddy (dominio/HTTPS)
+
+Questa repo include già un `Caddyfile` pronto per instradare:
+
+- `/supabase/*` → `kong:8000`
+- `/api/*` → `setup:3001`
+- tutto il resto → `web:80`
+
+#### Caso 1: locale (default)
+
+Con lo stack Docker attuale, Caddy ascolta in container su `:80` e viene esposto sulla macchina host su `http://localhost:3000` tramite:
+
+- `docker-compose.yml` → `caddy.ports: "3000:80"`
+- `.env` → `SITE_URL=http://localhost:3000`
+
+Non serve modificare nulla.
+
+#### Caso 2: produzione su un dominio con HTTPS automatico
+
+1. Punta il DNS del dominio (A/AAAA) verso il server dove gira Docker.
+2. Aggiorna `.env` impostando il dominio pubblico:
+
+   ```env
+   SITE_URL=https://example.com
+   ```
+
+3. Aggiorna `docker-compose.yml` per esporre le porte standard e persistere i certificati:
+
+   ```yml
+   caddy:
+     ports:
+       - "80:80"
+       - "443:443"
+     volumes:
+       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+       - caddy_data:/data
+       - caddy_config:/config
+   ```
+
+   e aggiungi (se assente) in fondo al file:
+
+   ```yml
+   volumes:
+     caddy_data:
+     caddy_config:
+   ```
+
+4. Aggiorna `Caddyfile` sostituendo `:80` con il tuo dominio:
+
+   ```caddyfile
+   example.com {
+     handle_path /supabase/* {
+       reverse_proxy kong:8000
+     }
+
+     handle_path /api/* {
+       reverse_proxy setup:3001
+     }
+
+     handle {
+       reverse_proxy web:80
+     }
+   }
+   ```
+
+5. Aggiorna la URL pubblica di Supabase Studio (in `docker-compose.yml`) per farla combaciare con il dominio:
+
+   - `studio.environment.SUPABASE_PUBLIC_URL=https://example.com/supabase`
+
+6. Riavvia lo stack:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+Note operative:
+
+- HTTPS automatico richiede che il server sia raggiungibile su `80/tcp` e `443/tcp` dall’esterno.
+- Se cambi il path pubblico di Supabase (diverso da `/supabase`), vanno aggiornati sia il `Caddyfile` sia il client (es. `VITE_SUPABASE_URL` oppure l’assunzione `${window.location.origin}/supabase`).
 
 ### Auth e “wizard” primo avvio
 
@@ -105,15 +185,15 @@ Flusso:
 
 Punti chiave:
 
-- Routing e guard: [App.tsx](file:///Users/n4zgul/Documents/vibeflow/src/App.tsx)
-- UI setup: [Setup.tsx](file:///Users/n4zgul/Documents/vibeflow/src/pages/Setup.tsx)
-- UI login/signup: [Login.tsx](file:///Users/n4zgul/Documents/vibeflow/src/pages/Login.tsx)
-- API client setup: [setupApi.ts](file:///Users/n4zgul/Documents/vibeflow/src/lib/setupApi.ts)
-- Client Supabase: [supabase.ts](file:///Users/n4zgul/Documents/vibeflow/src/lib/supabase.ts)
+- Routing e guard: [App.tsx](./src/App.tsx)
+- UI setup: [Setup.tsx](./src/pages/Setup.tsx)
+- UI login/signup: [Login.tsx](./src/pages/Login.tsx)
+- API client setup: [setupApi.ts](./src/lib/setupApi.ts)
+- Client Supabase: [supabase.ts](./src/lib/supabase.ts)
 
 ## Stack Docker (sviluppo/produzione “single host”)
 
-Lo stack è definito in [docker-compose.yml](file:///Users/n4zgul/Documents/vibeflow/docker-compose.yml).
+Lo stack è definito in [docker-compose.yml](./docker-compose.yml).
 
 Servizi principali:
 
@@ -143,7 +223,7 @@ Lo stack usa un file `.env` locale (non versionato).
 - Generazione consigliata: `npm run env:generate`
 - Avvio con generazione automatica: `npm run stack:up`
 
-Script: [generate-env.mjs](file:///Users/n4zgul/Documents/vibeflow/scripts/generate-env.mjs)
+Script: [generate-env.mjs](./scripts/generate-env.mjs)
 
 ### Cosa viene generato
 
@@ -165,7 +245,7 @@ Importante:
 
 Questo progetto usa una composizione “minimal” di Supabase self-hosted (Auth/REST/Realtime/Storage).
 
-Configurazione Kong: [kong.yml](file:///Users/n4zgul/Documents/vibeflow/supabase/kong.yml)
+Configurazione Kong: [kong.yml](./supabase/kong.yml)
 
 Nota: in questa configurazione la protezione via API keys su Kong non è abilitata a livello gateway. Il controllo accessi sui dati va gestito tramite JWT e (quando introdotte) policy RLS su Postgres.
 
@@ -174,7 +254,7 @@ Nota: in questa configurazione la protezione via API keys su Kong non è abilita
 Se vuoi lavorare solo sul frontend:
 
 - `npm run dev`
-- Proxy dev per `/api/*` → `http://localhost:3001` in [vite.config.ts](file:///Users/n4zgul/Documents/vibeflow/vite.config.ts)
+- Proxy dev per `/api/*` → `http://localhost:3001` in [vite.config.ts](./vite.config.ts)
 - Supabase URL:
   - se `VITE_SUPABASE_URL` è assente, il client usa `${window.location.origin}/supabase`
   - altrimenti usa `VITE_SUPABASE_URL`
@@ -199,7 +279,7 @@ Se vuoi lavorare solo sul frontend:
   - schema dati (es. `projects`, `graphs`, `graph_nodes`, `graph_edges`)
   - Row Level Security (RLS) e policy per `auth.uid()`
 - Il setup service usa `SERVICE_ROLE_KEY` per creare il primo utente (Admin API):
-  - codice: [setup-server/index.js](file:///Users/n4zgul/Documents/vibeflow/setup-server/index.js)
+  - codice: [setup-server/index.js](./setup-server/index.js)
   - endpoint: `POST /api/setup/init`
 - Ogni modifica che tocca Auth/compose dovrebbe includere:
   - `npm run lint`

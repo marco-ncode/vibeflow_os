@@ -8,24 +8,61 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 if (!supabaseUrl) throw new Error('Missing SUPABASE_URL')
 if (!serviceRoleKey) throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY')
 
-function sendJson(res, status, payload) {
+const nodeEnv = process.env.NODE_ENV ?? 'development'
+let siteOrigin = null
+try {
+  const raw = process.env.SITE_URL
+  if (raw) siteOrigin = new URL(raw).origin
+} catch {
+  siteOrigin = null
+}
+
+function getCorsOrigin(req) {
+  const origin = typeof req.headers.origin === 'string' ? req.headers.origin : null
+  if (!origin) return null
+
+  const forwardedHost = typeof req.headers['x-forwarded-host'] === 'string' ? req.headers['x-forwarded-host'] : null
+  const host = forwardedHost ?? (typeof req.headers.host === 'string' ? req.headers.host : null)
+
+  if (siteOrigin && origin === siteOrigin) return origin
+
+  if (host && (origin === `http://${host}` || origin === `https://${host}`)) return origin
+
+  if (nodeEnv !== 'production') {
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return origin
+  }
+
+  return null
+}
+
+function sendJson(req, res, status, payload) {
   const body = JSON.stringify(payload)
-  res.writeHead(status, {
+  const corsOrigin = getCorsOrigin(req)
+  const headers = {
     'content-type': 'application/json; charset=utf-8',
     'content-length': Buffer.byteLength(body),
-    'access-control-allow-origin': '*',
     'access-control-allow-methods': 'GET,POST,OPTIONS',
-    'access-control-allow-headers': 'content-type,authorization,apikey',
-  })
+    'access-control-allow-headers': 'content-type',
+  }
+  if (corsOrigin) {
+    headers['access-control-allow-origin'] = corsOrigin
+    headers['vary'] = 'Origin'
+  }
+  res.writeHead(status, headers)
   res.end(body)
 }
 
-function sendEmpty(res, status) {
-  res.writeHead(status, {
-    'access-control-allow-origin': '*',
+function sendEmpty(req, res, status) {
+  const corsOrigin = getCorsOrigin(req)
+  const headers = {
     'access-control-allow-methods': 'GET,POST,OPTIONS',
-    'access-control-allow-headers': 'content-type,authorization,apikey',
-  })
+    'access-control-allow-headers': 'content-type',
+  }
+  if (corsOrigin) {
+    headers['access-control-allow-origin'] = corsOrigin
+    headers['vary'] = 'Origin'
+  }
+  res.writeHead(status, headers)
   res.end()
 }
 
@@ -79,20 +116,20 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
 
     if (req.method === 'OPTIONS') {
-      sendEmpty(res, 204)
+      sendEmpty(req, res, 204)
       return
     }
 
     if (req.method === 'GET' && url.pathname === '/api/setup/status') {
       const complete = await setupComplete().catch(() => false)
-      sendJson(res, 200, { setupComplete: complete })
+      sendJson(req, res, 200, { setupComplete: complete })
       return
     }
 
     if (req.method === 'POST' && url.pathname === '/api/setup/init') {
       const complete = await setupComplete().catch(() => false)
       if (complete) {
-        sendJson(res, 409, { error: 'setup_already_completed' })
+        sendJson(req, res, 409, { error: 'setup_already_completed' })
         return
       }
 
@@ -101,20 +138,20 @@ const server = http.createServer(async (req, res) => {
       const password = String(body?.password ?? '')
 
       if (!email || password.length < 8) {
-        sendJson(res, 400, { error: 'invalid_input' })
+        sendJson(req, res, 400, { error: 'invalid_input' })
         return
       }
 
       await createFirstUser(email, password)
-      sendJson(res, 200, { ok: true })
+      sendJson(req, res, 200, { ok: true })
       return
     }
 
-    sendJson(res, 404, { error: 'not_found' })
+    sendJson(req, res, 404, { error: 'not_found' })
   } catch (err) {
-    sendJson(res, 500, { error: err instanceof Error ? err.message : 'internal_error' })
+    const message = err instanceof Error ? err.message : 'internal_error'
+    sendJson(req, res, 500, { error: nodeEnv === 'production' ? 'internal_error' : message })
   }
 })
 
 server.listen(port, '0.0.0.0')
-
