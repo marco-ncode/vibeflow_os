@@ -4,10 +4,11 @@ services:
     image: supabase/postgres:15.1.0.117
     restart: unless-stopped
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_HOST: /var/run/postgresql
     volumes:
       - ./volumes/db/data:/var/lib/postgresql/data
+      - ./supabase/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -h localhost"]
       interval: 5s
@@ -21,25 +22,26 @@ services:
       db:
         condition: service_healthy
     environment:
-      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:5432/postgres
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/postgres
       PGRST_DB_SCHEMAS: public,storage,graphql_public
       PGRST_DB_ANON_ROLE: anon
-      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
 
   auth:
-    image: supabase/gotrue:latest
+    image: public.ecr.aws/supabase/gotrue:v2.184.0
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
+      API_EXTERNAL_URL: ${SITE_URL:?SITE_URL is required}/supabase/auth/v1
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
       GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/postgres
-      GOTRUE_SITE_URL: ${SITE_URL}
-      GOTRUE_URI_ALLOW_LIST: ${SITE_URL}
-      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/postgres
+      GOTRUE_SITE_URL: ${SITE_URL:?SITE_URL is required}
+      GOTRUE_URI_ALLOW_LIST: ${SITE_URL:?SITE_URL is required}
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       GOTRUE_JWT_EXP: 3600
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
       GOTRUE_MAILER_AUTOCONFIRM: "true"
@@ -55,11 +57,11 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: supabase_admin
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       DB_NAME: postgres
       DB_AFTER_CONNECT_QUERY: SET search_path TO _realtime
-      API_JWT_SECRET: ${JWT_SECRET}
-      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      API_JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:?SECRET_KEY_BASE is required}
 
   storage:
     image: supabase/storage-api:latest
@@ -70,11 +72,11 @@ services:
       rest:
         condition: service_started
     environment:
-      ANON_KEY: ${ANON_KEY}
-      SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      ANON_KEY: ${ANON_KEY:?ANON_KEY is required}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY:?SERVICE_ROLE_KEY is required}
       POSTGREST_URL: http://rest:3000
-      PGRST_JWT_SECRET: ${JWT_SECRET}
-      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      PGRST_JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/postgres
       STORAGE_BACKEND: file
       FILE_STORAGE_BACKEND_PATH: /var/lib/storage
       REGION: local
@@ -84,7 +86,7 @@ services:
       - ./volumes/storage:/var/lib/storage
 
   meta:
-    image: supabase/postgres-meta:latest
+    image: supabase/postgres-meta:v0.84.2
     restart: unless-stopped
     depends_on:
       db:
@@ -95,7 +97,7 @@ services:
       PG_META_DB_PORT: 5432
       PG_META_DB_NAME: postgres
       PG_META_DB_USER: supabase_admin
-      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 
   kong:
     image: kong:2.8.1
@@ -123,13 +125,13 @@ services:
       - "3002:3000"
     environment:
       STUDIO_PG_META_URL: http://meta:8080
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       DEFAULT_ORGANIZATION_NAME: Default
       DEFAULT_PROJECT_NAME: VibeFlow
       SUPABASE_URL: http://kong:8000
       SUPABASE_PUBLIC_URL: http://localhost:3000/supabase
-      SUPABASE_ANON_KEY: ${ANON_KEY}
-      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      SUPABASE_ANON_KEY: ${ANON_KEY:?ANON_KEY is required}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY:?SERVICE_ROLE_KEY is required}
 
   setup:
     build:
@@ -141,14 +143,14 @@ services:
     environment:
       PORT: 3001
       SUPABASE_URL: http://kong:8000
-      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:?SERVICE_ROLE_KEY is required}
 
   web:
     build:
       context: .
       dockerfile: ./Dockerfile
       args:
-        VITE_SUPABASE_ANON_KEY: ${ANON_KEY}
+        VITE_SUPABASE_ANON_KEY: ${ANON_KEY:?ANON_KEY is required}
         VITE_SETUP_API_BASE_URL: /api
     restart: unless-stopped
     depends_on:

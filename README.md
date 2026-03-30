@@ -164,7 +164,7 @@ example.com {
     reverse_proxy kong:8000
   }
 
-  handle_path /api/* {
+  handle /api/* {
     reverse_proxy setup:3001
   }
 
@@ -300,7 +300,7 @@ Non serve modificare nulla.
        reverse_proxy kong:8000
      }
 
-     handle_path /api/* {
+     handle /api/* {
        reverse_proxy setup:3001
      }
 
@@ -375,6 +375,25 @@ Lo stack usa un file `.env` locale (non versionato).
 - Avvio con generazione automatica: `npm run stack:up`
 
 Script: [generate-env.mjs](./scripts/generate-env.mjs)
+
+Nota importante:
+
+- Non avviare `docker compose up` senza avere prima un `.env` valido (altrimenti alcuni servizi inizializzano il DB con credenziali vuote o incoerenti e poi vanno in errore).
+- Dopo il primo avvio con volumi persistenti (`./volumes/db/data`), non cambiare `POSTGRES_PASSWORD` in `.env` senza fare una migrazione: i ruoli DB creati al bootstrap rimangono con la password precedente.
+
+Se hai già avviato lo stack e cambiando `.env` è andato in errore (Auth/REST/Storage/Realtime in restart), puoi:
+
+- Reset completo (perdita dati): `docker compose down -v` + cancellazione `./volumes/*`
+- Fix senza wipe (riallineamento password ruoli DB):
+
+  ```bash
+  docker compose exec -T db sh -lc 'PGPASSWORD="$POSTGRES_PASSWORD" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c "
+  ALTER ROLE supabase_auth_admin WITH PASSWORD '\''$POSTGRES_PASSWORD'\'';
+  ALTER ROLE authenticator WITH PASSWORD '\''$POSTGRES_PASSWORD'\'';
+  ALTER ROLE supabase_storage_admin WITH PASSWORD '\''$POSTGRES_PASSWORD'\'';
+  "'
+  docker compose up -d --force-recreate auth rest storage realtime
+  ```
 
 ### Cosa viene generato
 
