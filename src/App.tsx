@@ -6,18 +6,35 @@ import Home from './pages/Home.tsx'
 import Editor from './pages/Editor.tsx'
 import Login from './pages/Login.tsx'
 import Setup from './pages/Setup.tsx'
+import Projects from './pages/Projects.tsx'
+import Account from './pages/Account.tsx'
 import { supabase } from './lib/supabase'
 import { getSetupStatus } from './lib/setupApi'
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 
-function Navbar({ theme, setTheme }: { theme: 'dark' | 'light', setTheme: (t: 'dark' | 'light') => void }) {
+function Navbar({
+  theme,
+  setTheme,
+  setupComplete,
+  isAuthed,
+}: {
+  theme: 'dark' | 'light',
+  setTheme: (t: 'dark' | 'light') => void,
+  setupComplete: boolean,
+  isAuthed: boolean,
+}) {
   return (
     <nav className="navbar">
       <div className="brand">VibeFlow</div>
       <div className="links">
-        <NavLink to="/" className={({ isActive }) => isActive ? 'active' : ''}>Home</NavLink>
-        <NavLink to="/editor" className={({ isActive }) => isActive ? 'active' : ''}>Editor</NavLink>
-        {/* Help e Pricing rimossi dall'editor */}
+        {setupComplete && isAuthed && (
+          <>
+            <NavLink to="/" className={({ isActive }) => isActive ? 'active' : ''}>Home</NavLink>
+            <NavLink to="/editor" className={({ isActive }) => isActive ? 'active' : ''}>Editor</NavLink>
+            <NavLink to="/projects" className={({ isActive }) => isActive ? 'active' : ''}>Progetti</NavLink>
+            <NavLink to="/account" className={({ isActive }) => isActive ? 'active' : ''}>Account</NavLink>
+          </>
+        )}
         <label className="theme-label" htmlFor="theme-select">Tema</label>
         <select id="theme-select" className="theme-select" value={theme} onChange={(e) => setTheme(e.target.value as 'dark' | 'light')}>
           <option value="dark">Scuro</option>
@@ -80,7 +97,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Navbar theme={theme} setTheme={setTheme} />
+      <Navbar theme={theme} setTheme={setTheme} setupComplete={setupComplete} isAuthed={isAuthed} />
       <Routes>
         <Route
           path="/setup"
@@ -97,6 +114,14 @@ function App() {
         <Route
           path="/editor"
           element={!setupComplete ? <Navigate to="/setup" replace /> : (isAuthed ? <Editor /> : <Navigate to="/login" replace />)}
+        />
+        <Route
+          path="/projects"
+          element={!setupComplete ? <Navigate to="/setup" replace /> : (isAuthed ? <Projects /> : <Navigate to="/login" replace />)}
+        />
+        <Route
+          path="/account"
+          element={!setupComplete ? <Navigate to="/setup" replace /> : (isAuthed ? <Account /> : <Navigate to="/login" replace />)}
         />
         {/* Route Help/Pricing rimosse */}
       </Routes>
