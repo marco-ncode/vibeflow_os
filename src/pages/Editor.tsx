@@ -332,11 +332,11 @@ ${json}
     const selected = nodes.filter((n) => selectedIds.includes(n.id) && n.type !== 'group')
     if (selected.length < 2) return
     const getW = (n: Node) => {
-      const w = (n as any).width
+      const w = n.width
       return typeof w === 'number' && w > 0 ? w : 160
     }
     const getH = (n: Node) => {
-      const h = (n as any).height
+      const h = n.height
       return typeof h === 'number' && h > 0 ? h : 90
     }
     const minX = Math.min(...selected.map((n) => n.position.x))
@@ -529,7 +529,12 @@ ${json}
               <div className="field">
                 <label>Input Connections</label>
                 <div className="conn-list">
-                  {(selectedNode.data?.inputs ?? []).map((inp: any, idx: number) => (
+                  {(() => {
+                    const data = selectedNode.data as unknown
+                    const inputs = (typeof data === 'object' && data && 'inputs' in data && Array.isArray((data as { inputs?: unknown }).inputs))
+                      ? (data as { inputs: { id: string, name?: string }[] }).inputs
+                      : []
+                    return inputs.map((inp, idx) => (
                     <div className="conn-item" key={inp.id ?? idx}>
                       <input
                         placeholder="Input name"
@@ -538,7 +543,8 @@ ${json}
                       />
                       <button className="btn danger" onClick={() => removeInput(selectedNode.id, inp.id)}>Remove</button>
                     </div>
-                  ))}
+                    ))
+                  })()}
                   <button className="btn" onClick={() => addInput(selectedNode.id)}>Add Input</button>
                 </div>
               </div>
@@ -546,7 +552,12 @@ ${json}
               <div className="field">
                 <label>Output Connections</label>
                 <div className="conn-list">
-                  {(selectedNode.data?.outputs ?? []).map((out: any, idx: number) => (
+                  {(() => {
+                    const data = selectedNode.data as unknown
+                    const outputs = (typeof data === 'object' && data && 'outputs' in data && Array.isArray((data as { outputs?: unknown }).outputs))
+                      ? (data as { outputs: { id: string, name?: string }[] }).outputs
+                      : []
+                    return outputs.map((out, idx) => (
                     <div className="conn-item" key={out.id ?? idx}>
                       <input
                         placeholder="Output name"
@@ -555,7 +566,8 @@ ${json}
                       />
                       <button className="btn danger" onClick={() => removeOutput(selectedNode.id, out.id)}>Remove</button>
                     </div>
-                  ))}
+                    ))
+                  })()}
                   <button className="btn" onClick={() => addOutput(selectedNode.id)}>Add Output</button>
                 </div>
               </div>

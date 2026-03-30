@@ -1,9 +1,14 @@
-import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import './App.css'
 
 import Home from './pages/Home.tsx'
 import Editor from './pages/Editor.tsx'
+import Login from './pages/Login.tsx'
+import Setup from './pages/Setup.tsx'
+import { supabase } from './lib/supabase'
+import { getSetupStatus } from './lib/setupApi'
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 
 function Navbar({ theme, setTheme }: { theme: 'dark' | 'light', setTheme: (t: 'dark' | 'light') => void }) {
   return (
@@ -29,17 +34,70 @@ function App() {
     return saved ?? 'dark'
   })
 
+  const [setupComplete, setSetupComplete] = useState<boolean | null>(null)
+  const [sessionReady, setSessionReady] = useState(false)
+  const [isAuthed, setIsAuthed] = useState(false)
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
   }, [theme])
 
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const status = await getSetupStatus()
+        if (!cancelled) setSetupComplete(Boolean(status.setupComplete))
+      } catch {
+        if (!cancelled) setSetupComplete(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    let unsub: (() => void) | null = null
+    ;(async () => {
+      const { data } = await supabase.auth.getSession()
+      setIsAuthed(Boolean(data.session))
+      setSessionReady(true)
+      const { data: sub } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, nextSession: Session | null) => {
+        setIsAuthed(Boolean(nextSession))
+      })
+      unsub = () => sub.subscription.unsubscribe()
+    })()
+    return () => { unsub?.() }
+  }, [])
+
+  if (setupComplete === null || !sessionReady) {
+    return (
+      <div className="container">
+        <div style={{ color: 'var(--muted)' }}>Caricamento…</div>
+      </div>
+    )
+  }
+
   return (
     <BrowserRouter>
       <Navbar theme={theme} setTheme={setTheme} />
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/editor" element={<Editor />} />
+        <Route
+          path="/setup"
+          element={setupComplete ? <Navigate to="/login" replace /> : <Setup />}
+        />
+        <Route
+          path="/login"
+          element={!setupComplete ? <Navigate to="/setup" replace /> : (isAuthed ? <Navigate to="/editor" replace /> : <Login />)}
+        />
+        <Route
+          path="/"
+          element={!setupComplete ? <Navigate to="/setup" replace /> : (isAuthed ? <Home /> : <Navigate to="/login" replace />)}
+        />
+        <Route
+          path="/editor"
+          element={!setupComplete ? <Navigate to="/setup" replace /> : (isAuthed ? <Editor /> : <Navigate to="/login" replace />)}
+        />
         {/* Route Help/Pricing rimosse */}
       </Routes>
     </BrowserRouter>

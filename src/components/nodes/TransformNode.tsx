@@ -2,8 +2,16 @@ import type { NodeProps } from 'reactflow'
 import { Handle, Position } from 'reactflow'
 import { useGraphStore } from '../../store/graphStore'
 
+type Port = { id: string, name?: string }
+
 function TransformNode({ id, data }: NodeProps) {
   const updateNodeData = useGraphStore((s) => s.updateNodeData)
+  const inputs = (typeof data === 'object' && data && 'inputs' in data && Array.isArray((data as { inputs?: unknown }).inputs))
+    ? (data as { inputs: Port[] }).inputs
+    : []
+  const outputs = (typeof data === 'object' && data && 'outputs' in data && Array.isArray((data as { outputs?: unknown }).outputs))
+    ? (data as { outputs: Port[] }).outputs
+    : []
   return (
     <div className="node transform">
       <div className="node-title"><span className="icon">🔧</span> Transform <button className="toggle" onClick={() => updateNodeData(id, { showDescription: !data?.showDescription })}>{data?.showDescription ? 'Nascondi' : 'Mostra'}</button></div>
@@ -13,10 +21,10 @@ function TransformNode({ id, data }: NodeProps) {
           <div className="desc">{String(data.description)}</div>
         )}
       </div>
-      {(data?.inputs ?? []).map((inp: any, idx: number) => (
+      {inputs.map((inp, idx) => (
         <Handle key={inp.id ?? idx} id={inp.id} type="target" position={Position.Left} style={{ top: 16 + idx * 20 }} />
       ))}
-      {(data?.outputs ?? []).map((out: any, idx: number) => (
+      {outputs.map((out, idx) => (
         <Handle key={out.id ?? idx} id={out.id} type="source" position={Position.Right} style={{ top: 16 + idx * 20 }} />
       ))}
     </div>

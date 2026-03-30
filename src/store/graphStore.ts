@@ -3,6 +3,8 @@ import type { Node, Edge } from 'reactflow'
 
 type NodeKind = 'prompt' | 'transform' | 'io' | 'decision' | 'api' | 'storage' | 'table'
 
+export type Port = { id: string, name?: string }
+
 type GraphState = {
   nodes: Node[]
   edges: Edge[]
@@ -73,7 +75,11 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   removeInput: (id, inputId) => {
     const nodes = get().nodes.map((n) => {
       if (n.id !== id) return n
-      const inputs = (n.data?.inputs ?? []).filter((i: any) => i.id !== inputId)
+      const data = n.data as unknown
+      const currentInputs = (typeof data === 'object' && data && 'inputs' in data && Array.isArray((data as { inputs?: unknown }).inputs))
+        ? (data as { inputs: Port[] }).inputs
+        : []
+      const inputs = currentInputs.filter((i) => i.id !== inputId)
       return { ...n, data: { ...n.data, inputs } }
     })
     // opzionale: potremmo anche rimuovere edges collegati a questo handle
@@ -82,7 +88,11 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   updateInputName: (id, inputId, name) => {
     const nodes = get().nodes.map((n) => {
       if (n.id !== id) return n
-      const inputs = (n.data?.inputs ?? []).map((i: any) => i.id === inputId ? { ...i, name } : i)
+      const data = n.data as unknown
+      const currentInputs = (typeof data === 'object' && data && 'inputs' in data && Array.isArray((data as { inputs?: unknown }).inputs))
+        ? (data as { inputs: Port[] }).inputs
+        : []
+      const inputs = currentInputs.map((i) => i.id === inputId ? { ...i, name } : i)
       return { ...n, data: { ...n.data, inputs } }
     })
     set({ nodes })
@@ -99,7 +109,11 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   removeOutput: (id, outputId) => {
     const nodes = get().nodes.map((n) => {
       if (n.id !== id) return n
-      const outputs = (n.data?.outputs ?? []).filter((o: any) => o.id !== outputId)
+      const data = n.data as unknown
+      const currentOutputs = (typeof data === 'object' && data && 'outputs' in data && Array.isArray((data as { outputs?: unknown }).outputs))
+        ? (data as { outputs: Port[] }).outputs
+        : []
+      const outputs = currentOutputs.filter((o) => o.id !== outputId)
       return { ...n, data: { ...n.data, outputs } }
     })
     set({ nodes })
@@ -107,7 +121,11 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   updateOutputName: (id, outputId, name) => {
     const nodes = get().nodes.map((n) => {
       if (n.id !== id) return n
-      const outputs = (n.data?.outputs ?? []).map((o: any) => o.id === outputId ? { ...o, name } : o)
+      const data = n.data as unknown
+      const currentOutputs = (typeof data === 'object' && data && 'outputs' in data && Array.isArray((data as { outputs?: unknown }).outputs))
+        ? (data as { outputs: Port[] }).outputs
+        : []
+      const outputs = currentOutputs.map((o) => o.id === outputId ? { ...o, name } : o)
       return { ...n, data: { ...n.data, outputs } }
     })
     set({ nodes })
@@ -124,29 +142,47 @@ export const useGraphStore = create<GraphState>((set, get) => ({
 
     const nodeItems = nodes
       .filter((n) => n.type !== 'group')
-      .map((n) => ({
+      .map((n) => {
+        const data = n.data as unknown
+        const inputs = (typeof data === 'object' && data && 'inputs' in data && Array.isArray((data as { inputs?: unknown }).inputs))
+          ? (data as { inputs: Port[] }).inputs
+          : []
+        const outputs = (typeof data === 'object' && data && 'outputs' in data && Array.isArray((data as { outputs?: unknown }).outputs))
+          ? (data as { outputs: Port[] }).outputs
+          : []
+
+        return {
         id: toMaybeNumber(n.id),
-        name: String(n.data?.label ?? n.id),
-        description: String(n.data?.description ?? ''),
-        inputs: (n.data?.inputs ?? []).map((i: any) => ({ id: i.id, name: String(i.name ?? '') })),
-        outputs: (n.data?.outputs ?? []).map((o: any) => ({ id: o.id, name: String(o.name ?? '') })),
+        name: String((typeof data === 'object' && data && 'label' in data) ? (data as { label?: unknown }).label ?? n.id : n.id),
+        description: String((typeof data === 'object' && data && 'description' in data) ? (data as { description?: unknown }).description ?? '' : ''),
+        inputs: inputs.map((i) => ({ id: i.id, name: String(i.name ?? '') })),
+        outputs: outputs.map((o) => ({ id: o.id, name: String(o.name ?? '') })),
         images: [],
         imageDescription: '',
-      }))
+        }
+      })
 
     const connections = edges.map((e) => {
       const src = nodes.find((n) => n.id === e.source)
       const dst = nodes.find((n) => n.id === e.target)
-      const out = (src?.data?.outputs ?? []).find((o: any) => o.id === e.sourceHandle)
-      const inp = (dst?.data?.inputs ?? []).find((i: any) => i.id === e.targetHandle)
+      const srcData = src?.data as unknown
+      const dstData = dst?.data as unknown
+      const srcOutputs = (typeof srcData === 'object' && srcData && 'outputs' in srcData && Array.isArray((srcData as { outputs?: unknown }).outputs))
+        ? (srcData as { outputs: Port[] }).outputs
+        : []
+      const dstInputs = (typeof dstData === 'object' && dstData && 'inputs' in dstData && Array.isArray((dstData as { inputs?: unknown }).inputs))
+        ? (dstData as { inputs: Port[] }).inputs
+        : []
+      const out = srcOutputs.find((o) => o.id === e.sourceHandle)
+      const inp = dstInputs.find((i) => i.id === e.targetHandle)
       return {
         from: {
-          nodeId: toMaybeNumber(e.source as any),
+          nodeId: toMaybeNumber(e.source),
           outputId: e.sourceHandle ?? '',
           outputName: String(out?.name ?? ''),
         },
         to: {
-          nodeId: toMaybeNumber(e.target as any),
+          nodeId: toMaybeNumber(e.target),
           inputId: e.targetHandle ?? '',
           inputName: String(inp?.name ?? ''),
         },
