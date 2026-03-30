@@ -7,6 +7,30 @@ Lo stack include anche Caddy come reverse proxy (unico punto di ingresso) e pubb
 ## Requisiti
 
 - Docker + Docker Compose
+- Node.js 20+ (consigliato) + npm
+
+### Installare Node.js e npm
+
+Node.js serve per eseguire gli script `npm` (es. generazione `.env`) e per lo sviluppo frontend senza Docker.
+
+#### Ubuntu/Debian (NodeSource)
+
+```bash
+sudo apt update
+sudo apt install -y ca-certificates curl
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+node -v
+npm -v
+```
+
+#### macOS (Homebrew)
+
+```bash
+brew install node@20
+node -v
+npm -v
+```
 
 ## Avvio (stand-alone, consigliato)
 
@@ -67,6 +91,133 @@ Dopo la creazione, effettua il login:
    ```
 
 Durante lo sviluppo, le chiamate a `/api/*` vengono proxate a `http://localhost:3001` (vedi `vite.config.ts`).
+
+## VPS setup (Linux, production) [EN]
+
+Prerequisites:
+
+- Linux VPS with public IP and a DNS A/AAAA record pointing to your domain (e.g. `example.com`)
+- Open ports: `22`, `80`, `443`
+- Sudo user
+
+1) Install Docker + Compose (Ubuntu/Debian)
+
+```bash
+sudo apt update && sudo apt -y upgrade
+sudo apt -y install ca-certificates curl gnupg git ufw
+
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+
+sudo apt update
+sudo apt -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+sudo usermod -aG docker $USER
+newgrp docker
+docker version
+docker compose version
+```
+
+2) Firewall (recommended)
+
+```bash
+sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+sudo ufw status
+```
+
+3) Clone the repository
+
+```bash
+cd ~
+git clone https://github.com/marco-ncode/vibeflow_os.git
+cd vibeflow_os
+```
+
+4) Generate `.env` secrets
+
+The generator uses Node.js. If Node is not available, either install it (see “Installare Node.js e npm” above) or create `.env` manually from `.env.example`.
+
+```bash
+npm ci
+npm run env:generate
+```
+
+Then set your public domain:
+
+```bash
+sed -i 's|^SITE_URL=.*|SITE_URL=https://example.com|' .env
+```
+
+5) Caddy with domain + HTTPS
+
+Replace `:80` in `Caddyfile` with your domain:
+
+```caddyfile
+example.com {
+  handle_path /supabase/* {
+    reverse_proxy kong:8000
+  }
+
+  handle_path /api/* {
+    reverse_proxy setup:3001
+  }
+
+  handle {
+    reverse_proxy web:80
+  }
+}
+```
+
+6) Expose 80/443 and persist certs (docker-compose)
+
+Edit the `caddy` service in `docker-compose.yml`:
+
+```yml
+ports:
+  - "80:80"
+  - "443:443"
+volumes:
+  - ./Caddyfile:/etc/caddy/Caddyfile:ro
+  - caddy_data:/data
+  - caddy_config:/config
+```
+
+Add volumes at the end of the file if missing:
+
+```yml
+volumes:
+  caddy_data:
+  caddy_config:
+```
+
+Update Supabase Studio public URL to match your domain:
+
+- `studio.environment.SUPABASE_PUBLIC_URL=https://example.com/supabase`
+
+7) Start the stack
+
+```bash
+docker compose up -d --build
+docker compose ps
+```
+
+8) Verify
+
+- App: `https://example.com`
+- First-run setup: `https://example.com/setup`
+- Supabase Studio: `http://SERVER_IP:3002` (by default it is not exposed behind Caddy)
+
+Security notes:
+
+- Complete `/setup` immediately after bootstrapping. Until the first admin is created, the bootstrap endpoint is intentionally unauthenticated.
+- Consider restricting public exposure during bootstrap (e.g., firewall allow-list/VPN).
+- Backups: persist and back up `./volumes/db/data` and `./volumes/storage`.
 
 ## Comandi utili
 
