@@ -24,7 +24,7 @@ function Navbar({
   return (
     <nav className="navbar">
       <div className="brand">
-        <img src="/vite.svg" width={50} height={50} alt="VibeFlow OS" />
+        <img src="/nn.png" width={50} height={50} alt="VibeFlow OS" />
         <span>VibeFlow OS</span>
       </div>
       <div className="links">
