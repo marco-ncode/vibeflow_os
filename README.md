@@ -108,6 +108,10 @@ Dopo la creazione, la UI ti porta a `/login`:
 
 - http://localhost:3000/login
 
+Dopo il login, la landing page è `/projects`:
+
+- http://localhost:3000/projects
+
 ## Flusso operativo (end-to-end)
 
 ### Avvio Docker
