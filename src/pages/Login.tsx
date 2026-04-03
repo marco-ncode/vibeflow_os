@@ -5,6 +5,7 @@ function Login() {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -32,51 +33,90 @@ function Login() {
   }
 
   return (
-    <div className="container">
-      <h2>{mode === 'login' ? 'Accedi' : 'Registrati'}</h2>
-      <p style={{ color: 'var(--muted)' }}>
-        {mode === 'login' ? 'Accedi per usare VibeFlow.' : 'Crea un account per usare VibeFlow.'}
-      </p>
-      <form onSubmit={onSubmit} style={{ maxWidth: 420 }}>
-        <div style={{ display: 'grid', gap: 10 }}>
-          <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ color: 'var(--muted)', fontSize: 12 }}>Email</span>
+    <div className="auth-shell">
+      <div className="auth-card">
+        <div className="auth-head">
+          <img className="auth-logo" src="/dark.png" width={80} height={80} alt="VibeFlow" />
+          <div className="auth-title">{mode === 'login' ? 'SIGN IN' : 'SIGN UP'}</div>
+        </div>
+
+        <form onSubmit={onSubmit} className="auth-form">
+          <label className="auth-label" htmlFor="email">E-mail</label>
+          <input
+            id="email"
+            className="auth-input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            autoComplete="email"
+            required
+            placeholder="name@example.com"
+          />
+
+          <label className="auth-label" htmlFor="password">Password</label>
+          <div className="auth-password">
             <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              type="email"
-              autoComplete="email"
-              required
-              style={{ padding: 10, borderRadius: 8, border: '1px solid var(--border-soft)', background: 'var(--surface)', color: 'var(--text)' }}
-            />
-          </label>
-          <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ color: 'var(--muted)', fontSize: 12 }}>Password</span>
-            <input
+              id="password"
+              className="auth-input auth-password-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               minLength={8}
               required
-              style={{ padding: 10, borderRadius: 8, border: '1px solid var(--border-soft)', background: 'var(--surface)', color: 'var(--text)' }}
+              placeholder="••••••••"
             />
-          </label>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <button className="btn primary" type="submit" disabled={!canSubmit || busy}>
-              {busy ? 'Attendere…' : (mode === 'login' ? 'Accedi' : 'Registrati')}
-            </button>
-            <button className="btn" type="button" onClick={() => setMode(mode === 'login' ? 'signup' : 'login')} disabled={busy}>
-              {mode === 'login' ? 'Crea account' : 'Ho già un account'}
+            <button
+              type="button"
+              className="auth-eye"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? 'Nascondi password' : 'Mostra password'}
+              disabled={busy}
+            >
+              {showPassword ? 'Hide' : 'Show'}
             </button>
           </div>
+
+          {mode === 'login' && (
+            <button
+              type="button"
+              className="auth-link"
+              onClick={() => setMessage('Per reimpostare la password, contatta un admin.')}
+              disabled={busy}
+            >
+              Forgot your password?
+            </button>
+          )}
+
+          <button className="btn primary auth-submit" type="submit" disabled={!canSubmit || busy}>
+            {busy ? 'Attendere…' : (mode === 'login' ? 'SIGN IN' : 'SIGN UP')}
+          </button>
+
+          <div className="auth-footer">
+            {mode === 'login' ? (
+              <>
+                Don&apos;t have an account?{' '}
+                <button className="auth-inline" type="button" onClick={() => setMode('signup')} disabled={busy}>
+                  SIGN UP
+                </button>
+              </>
+            ) : (
+              <>
+                Already have an account?{' '}
+                <button className="auth-inline" type="button" onClick={() => setMode('login')} disabled={busy}>
+                  SIGN IN
+                </button>
+              </>
+            )}
+          </div>
+
           {message && (
-            <div style={{ padding: 10, borderRadius: 8, border: '1px solid var(--border-soft)', color: 'var(--text)' }}>
+            <div className="auth-message">
               {message}
             </div>
           )}
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   )
 }
