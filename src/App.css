@@ -39,6 +39,9 @@ body {
 }
 .navbar .brand {
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 .navbar .links a {
   margin-left: 12px;
