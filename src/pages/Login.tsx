@@ -19,7 +19,7 @@ function Login() {
     try {
       if (mode === 'login') {
         await authLogin({ email, password })
-        window.location.replace('/editor')
+        window.location.replace('/projects')
       } else {
         await authSignup({ email, password })
         setMessage('Registrazione completata.')

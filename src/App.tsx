@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-do
 import { useEffect, useState } from 'react'
 import './App.css'
 
-import Home from './pages/Home.tsx'
 import Editor from './pages/Editor.tsx'
 import Login from './pages/Login.tsx'
 import Setup from './pages/Setup.tsx'
@@ -28,9 +27,8 @@ function Navbar({
       <div className="links">
         {setupComplete && isAuthed && (
           <>
-            <NavLink to="/" className={({ isActive }) => isActive ? 'active' : ''}>Home</NavLink>
-            <NavLink to="/editor" className={({ isActive }) => isActive ? 'active' : ''}>Editor</NavLink>
             <NavLink to="/projects" className={({ isActive }) => isActive ? 'active' : ''}>Progetti</NavLink>
+            <NavLink to="/editor" className={({ isActive }) => isActive ? 'active' : ''}>Editor</NavLink>
             <NavLink to="/account" className={({ isActive }) => isActive ? 'active' : ''}>Account</NavLink>
           </>
         )}
@@ -107,11 +105,11 @@ function App() {
         />
         <Route
           path="/login"
-          element={!setupComplete ? <Navigate to="/setup" replace /> : (isAuthed ? <Navigate to="/editor" replace /> : <Login />)}
+          element={!setupComplete ? <Navigate to="/setup" replace /> : (isAuthed ? <Navigate to="/projects" replace /> : <Login />)}
         />
         <Route
           path="/"
-          element={!setupComplete ? <Navigate to="/setup" replace /> : (isAuthed ? <Home /> : <Navigate to="/login" replace />)}
+          element={!setupComplete ? <Navigate to="/setup" replace /> : (isAuthed ? <Navigate to="/projects" replace /> : <Navigate to="/login" replace />)}
         />
         <Route
           path="/editor"
