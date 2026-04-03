@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import './App.css'
 
@@ -97,7 +97,28 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Navbar theme={theme} setTheme={setTheme} setupComplete={setupComplete} isAuthed={isAuthed} />
+      <AppRoutes theme={theme} setTheme={setTheme} setupComplete={setupComplete} isAuthed={isAuthed} />
+    </BrowserRouter>
+  )
+}
+
+function AppRoutes({
+  theme,
+  setTheme,
+  setupComplete,
+  isAuthed,
+}: {
+  theme: 'dark' | 'light',
+  setTheme: (t: 'dark' | 'light') => void,
+  setupComplete: boolean,
+  isAuthed: boolean,
+}) {
+  const location = useLocation()
+  const hideNavbar = location.pathname === '/login' || location.pathname === '/setup'
+
+  return (
+    <>
+      {!hideNavbar && <Navbar theme={theme} setTheme={setTheme} setupComplete={setupComplete} isAuthed={isAuthed} />}
       <Routes>
         <Route
           path="/setup"
@@ -123,9 +144,8 @@ function App() {
           path="/account"
           element={!setupComplete ? <Navigate to="/setup" replace /> : (isAuthed ? <Account /> : <Navigate to="/login" replace />)}
         />
-        {/* Route Help/Pricing rimosse */}
       </Routes>
-    </BrowserRouter>
+    </>
   )
 }
 
