@@ -142,18 +142,20 @@ async function hashPassword(password) {
   })
   const saltPart = encodeBase64Url(salt)
   const hashPart = encodeBase64Url(key)
-  return `scrypt$16384$8$1$${saltPart}$${hashPart}`
+  return ['scrypt', '16384', '8', '1', '', saltPart, hashPart].join('$')
 }
 
 async function verifyPassword(password, stored) {
   const parts = String(stored ?? '').split('$')
-  if (parts.length !== 7) return false
+  if (parts.length !== 6 && parts.length !== 7) return false
   if (parts[0] !== 'scrypt') return false
   const cost = Number(parts[1])
   const blockSize = Number(parts[2])
   const parallelization = Number(parts[3])
-  const salt = Buffer.from(parts[5], 'base64url')
-  const hash = Buffer.from(parts[6], 'base64url')
+  const saltIndex = parts.length === 7 ? 5 : 4
+  const hashIndex = parts.length === 7 ? 6 : 5
+  const salt = Buffer.from(parts[saltIndex], 'base64url')
+  const hash = Buffer.from(parts[hashIndex], 'base64url')
   const key = await new Promise((resolve, reject) => {
     crypto.scrypt(password, salt, hash.length, { cost, blockSize, parallelization }, (err, derivedKey) => {
       if (err) reject(err)
