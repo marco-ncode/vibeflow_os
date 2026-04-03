@@ -521,6 +521,123 @@ const server = http.createServer(async (req, res) => {
       return
     }
 
+    if (req.method === 'GET' && /^\/api\/flows\/\d+$/.test(url.pathname)) {
+      const user = await authFromRequest(req)
+      if (!user) {
+        sendJson(req, res, 401, { error: 'unauthorized' })
+        return
+      }
+
+      const id = Number(url.pathname.split('/').pop())
+      if (!Number.isFinite(id)) {
+        sendJson(req, res, 400, { error: 'invalid_input' })
+        return
+      }
+
+      const { rows } = await pool.query(
+        'select f.id, f.project_id, f.flow_name, f.graph, f.created_at, f.updated_at from public.flows f join public.projects p on p.id = f.project_id where f.id = $1 and p.user_id = $2',
+        [id, user.id],
+      )
+      const flow = rows?.[0] ?? null
+      if (!flow) {
+        sendJson(req, res, 404, { error: 'not_found' })
+        return
+      }
+      sendJson(req, res, 200, { flow })
+      return
+    }
+
+    if (req.method === 'PUT' && /^\/api\/flows\/\d+$/.test(url.pathname)) {
+      const user = await authFromRequest(req)
+      if (!user) {
+        sendJson(req, res, 401, { error: 'unauthorized' })
+        return
+      }
+
+      const id = Number(url.pathname.split('/').pop())
+      if (!Number.isFinite(id)) {
+        sendJson(req, res, 400, { error: 'invalid_input' })
+        return
+      }
+
+      const body = await readJson(req)
+      const flowName = typeof body?.flow_name === 'string' ? body.flow_name.trim() : null
+      const graph = body?.graph ?? null
+
+      if (flowName !== null && !flowName) {
+        sendJson(req, res, 400, { error: 'invalid_input' })
+        return
+      }
+
+      const { rows } = await pool.query(
+        'update public.flows f set flow_name = coalesce($1, f.flow_name), graph = coalesce($2, f.graph) where f.id = $3 and exists (select 1 from public.projects p where p.id = f.project_id and p.user_id = $4) returning f.id, f.project_id, f.flow_name, f.created_at, f.updated_at',
+        [flowName, graph, id, user.id],
+      )
+      const flow = rows?.[0] ?? null
+      if (!flow) {
+        sendJson(req, res, 404, { error: 'not_found' })
+        return
+      }
+      sendJson(req, res, 200, { flow })
+      return
+    }
+
+    if (req.method === 'POST' && /^\/api\/flows\/\d+\/duplicate$/.test(url.pathname)) {
+      const user = await authFromRequest(req)
+      if (!user) {
+        sendJson(req, res, 401, { error: 'unauthorized' })
+        return
+      }
+
+      const parts = url.pathname.split('/')
+      const id = Number(parts[3])
+      if (!Number.isFinite(id)) {
+        sendJson(req, res, 400, { error: 'invalid_input' })
+        return
+      }
+
+      const body = await readJson(req)
+      const rawName = typeof body?.flow_name === 'string' ? body.flow_name.trim() : ''
+      const nextName = rawName || null
+
+      const { rows } = await pool.query(
+        'insert into public.flows (project_id, flow_name, graph) select f.project_id, coalesce($1, (coalesce(f.flow_name, \'Untitled workflow\') || \' (copy)\')), f.graph from public.flows f join public.projects p on p.id = f.project_id where f.id = $2 and p.user_id = $3 returning id, project_id, flow_name, created_at, updated_at',
+        [nextName, id, user.id],
+      )
+      const flow = rows?.[0] ?? null
+      if (!flow) {
+        sendJson(req, res, 404, { error: 'not_found' })
+        return
+      }
+      sendJson(req, res, 200, { flow })
+      return
+    }
+
+    if (req.method === 'DELETE' && /^\/api\/flows\/\d+$/.test(url.pathname)) {
+      const user = await authFromRequest(req)
+      if (!user) {
+        sendJson(req, res, 401, { error: 'unauthorized' })
+        return
+      }
+
+      const id = Number(url.pathname.split('/').pop())
+      if (!Number.isFinite(id)) {
+        sendJson(req, res, 400, { error: 'invalid_input' })
+        return
+      }
+
+      const { rows } = await pool.query(
+        'delete from public.flows f where f.id = $1 and exists (select 1 from public.projects p where p.id = f.project_id and p.user_id = $2) returning f.id',
+        [id, user.id],
+      )
+      if (!rows?.length) {
+        sendJson(req, res, 404, { error: 'not_found' })
+        return
+      }
+      sendJson(req, res, 200, { ok: true })
+      return
+    }
+
     if (req.method === 'DELETE' && /^\/api\/projects\/\d+$/.test(url.pathname)) {
       const user = await authFromRequest(req)
       if (!user) {

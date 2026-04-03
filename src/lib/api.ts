@@ -58,6 +58,11 @@ export type FlowRow = {
   updated_at: string | null
 }
 
+export type FlowDetailRow = FlowRow & {
+  project_id: number
+  graph: unknown
+}
+
 export async function listProjects(): Promise<ProjectRow[]> {
   const res = await apiFetch<{ projects: ProjectRow[] }>('/projects', { method: 'GET' })
   return res.projects ?? []
@@ -85,4 +90,23 @@ export async function listFlows(projectId: number): Promise<FlowRow[]> {
 export async function createFlow(projectId: number, input: { flow_name: string | null }): Promise<FlowRow> {
   const res = await apiFetch<{ flow: FlowRow }>(`/projects/${projectId}/flows`, { method: 'POST', body: JSON.stringify(input) })
   return res.flow
+}
+
+export async function getFlow(id: number): Promise<FlowDetailRow> {
+  const res = await apiFetch<{ flow: FlowDetailRow }>(`/flows/${id}`, { method: 'GET' })
+  return res.flow
+}
+
+export async function updateFlow(id: number, input: { flow_name?: string | null, graph?: unknown }): Promise<FlowRow> {
+  const res = await apiFetch<{ flow: FlowRow }>(`/flows/${id}`, { method: 'PUT', body: JSON.stringify(input) })
+  return res.flow
+}
+
+export async function duplicateFlow(id: number, input: { flow_name?: string | null } = {}): Promise<FlowRow> {
+  const res = await apiFetch<{ flow: FlowRow }>(`/flows/${id}/duplicate`, { method: 'POST', body: JSON.stringify(input) })
+  return res.flow
+}
+
+export async function deleteFlow(id: number): Promise<void> {
+  await apiFetch<{ ok: true }>(`/flows/${id}`, { method: 'DELETE' })
 }
