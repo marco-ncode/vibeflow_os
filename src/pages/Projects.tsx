@@ -283,7 +283,10 @@ function Projects() {
                   ) : (
                     <div className="flows-list">
                       {flows.length === 0 ? (
-                        <div className="projects-muted">No workflows yet</div>
+                        <div className="workflows-empty">
+                          <div className="workflows-empty-title">This project is empty</div>
+                          <div className="workflows-empty-subtitle">Workflows in this project will appear here.</div>
+                        </div>
                       ) : (
                         flows.map((f) => (
                           <div key={f.id} className="flow-item">
