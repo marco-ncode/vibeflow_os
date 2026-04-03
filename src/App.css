@@ -39,6 +39,9 @@ body {
 }
 .navbar .brand {
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 .navbar .links a {
   margin-left: 12px;
@@ -46,6 +49,28 @@ body {
   text-decoration: none;
 }
 .navbar .links a.active { color: var(--text); }
+.navbar .links .nav-btn {
+  margin-left: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #3b82f6;
+  border: 1px solid #3b82f6;
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+.navbar .links .nav-btn:hover {
+  background: color-mix(in oklab, #3b82f6 86%, #000000);
+  border-color: color-mix(in oklab, #3b82f6 86%, #000000);
+}
+.navbar .links .nav-btn.active {
+  color: #ffffff;
+}
 .navbar .theme-label { margin-left: 16px; color: var(--muted); font-size: 12px; }
 .navbar .theme-select { margin-left: 8px; background: var(--surface); color: var(--text); border: 1px solid var(--border-soft); border-radius: 6px; padding: 6px 8px; }
 .navbar .theme-toggle { margin-left: 16px; display: inline-flex; gap: 6px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: color-mix(in oklab, var(--surface) 70%, transparent); }
@@ -707,6 +732,62 @@ body {
 .wf-menu-item.danger:hover {
   background: color-mix(in oklab, #ef4444 14%, transparent);
   border-color: color-mix(in oklab, #ef4444 55%, rgba(148, 163, 184, 0.18));
+}
+
+html[data-theme="light"] .flows-list {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+html[data-theme="light"] .workflow-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+}
+
+html[data-theme="light"] .workflow-card:hover {
+  background: #ffffff;
+  box-shadow: 0 14px 40px rgba(2, 6, 23, 0.10);
+}
+
+html[data-theme="light"] .workflow-avatar {
+  background: #6d28d9;
+  border-color: transparent;
+  color: #ffffff;
+}
+
+html[data-theme="light"] .workflow-subtitle {
+  color: #64748b;
+}
+
+html[data-theme="light"] .wf-menu {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 16px 40px rgba(2, 6, 23, 0.12);
+}
+
+html[data-theme="light"] .wf-menu-item {
+  color: #0f172a;
+}
+
+html[data-theme="light"] .wf-menu-item:hover {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+html[data-theme="light"] .wf-menu-item.danger {
+  color: #b91c1c;
+}
+
+html[data-theme="light"] .wf-menu-item.danger:hover {
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+html[data-theme="light"] .workflow-avatar.workflow-avatar-create {
+  background: #3b82f6;
+  border-color: transparent;
+  color: #ffffff;
 }
 
 .flow-item {
