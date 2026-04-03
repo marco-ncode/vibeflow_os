@@ -197,8 +197,7 @@ function Projects() {
         <aside className="projects-sidebar">
           <div className="projects-sidebar-head">
             <div className="projects-brand">
-              <span className="projects-brand-title">VibeFlow OS</span>
-              <span className="projects-brand-caret">▾</span>
+              <span className="projects-brand-title">Your Projects</span>
             </div>
             <button className="icon-btn" type="button" onClick={() => void loadProjects()} aria-label="Refresh projects" disabled={loading}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -335,7 +334,7 @@ function Projects() {
               </div>
               <div className="field" style={{ marginBottom: 0 }}>
                 <label>Description</label>
-                <textarea value={projectDraftScope} onChange={(e) => setProjectDraftScope(e.target.value)} placeholder="Optional description" rows={5} />
+                <textarea value={projectDraftScope} onChange={(e) => setProjectDraftScope(e.target.value)} placeholder="Describe here the scope of your project" rows={5} />
               </div>
             </div>
 

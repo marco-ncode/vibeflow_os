@@ -32,11 +32,28 @@ function Navbar({
             <NavLink to="/account" className={({ isActive }) => isActive ? 'active' : ''}>Account</NavLink>
           </>
         )}
-        <label className="theme-label" htmlFor="theme-select">Tema</label>
-        <select id="theme-select" className="theme-select" value={theme} onChange={(e) => setTheme(e.target.value as 'dark' | 'light')}>
-          <option value="dark">Scuro</option>
-          <option value="light">Chiaro</option>
-        </select>
+        <div className="theme-toggle" role="group" aria-label="Theme">
+          <button type="button" className={`theme-toggle-btn ${theme === 'light' ? 'active' : ''}`} onClick={() => setTheme('light')} aria-pressed={theme === 'light'}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2" />
+              <path d="M12 20v2" />
+              <path d="M4.93 4.93l1.41 1.41" />
+              <path d="M17.66 17.66l1.41 1.41" />
+              <path d="M2 12h2" />
+              <path d="M20 12h2" />
+              <path d="M4.93 19.07l1.41-1.41" />
+              <path d="M17.66 6.34l1.41-1.41" />
+            </svg>
+            Light
+          </button>
+          <button type="button" className={`theme-toggle-btn ${theme === 'dark' ? 'active' : ''}`} onClick={() => setTheme('dark')} aria-pressed={theme === 'dark'}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" />
+            </svg>
+            Dark
+          </button>
+        </div>
       </div>
     </nav>
   )
