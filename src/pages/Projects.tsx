@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createFlow, createProject, deleteFlow, deleteProject, duplicateFlow, listFlows, listProjects, updateFlow, updateProject, type FlowRow, type ProjectRow } from '../lib/api'
+import { authLogout, createFlow, createProject, deleteFlow, deleteProject, duplicateFlow, listFlows, listProjects, updateFlow, updateProject, type FlowRow, type ProjectRow } from '../lib/api'
 
 function Projects() {
   const navigate = useNavigate()
@@ -171,6 +171,12 @@ function Projects() {
     navigate(`/editor?flowId=${encodeURIComponent(String(id))}`)
   }, [navigate])
 
+  const onLogout = useCallback(async () => {
+    setError(null)
+    await authLogout().catch(() => null)
+    window.location.replace('/login')
+  }, [])
+
   async function onSaveWorkflow() {
     if (!canSaveWorkflow || selectedProjectId == null) return
     setSavingWorkflow(true)
@@ -319,6 +325,15 @@ function Projects() {
               )}
             </div>
           )}
+
+          <div className="projects-sidebar-foot">
+            <button type="button" className="btn sidebar-logout" onClick={() => void onLogout()}>
+              Logout
+            </button>
+            <button type="button" className="btn sidebar-account" onClick={() => navigate('/account')}>
+              Account
+            </button>
+          </div>
         </aside>
 
         <main className="projects-main">
@@ -328,11 +343,6 @@ function Projects() {
                 <div style={{ fontWeight: 800 }}>{selectedProject?.project_name ?? 'Select a project'}</div>
                 {selectedProject?.project_scope && <div className="projects-muted">{selectedProject.project_scope}</div>}
               </div>
-              {selectedProjectId != null && (
-                <button className="btn" onClick={() => void loadFlows(selectedProjectId)} disabled={flowsLoading}>
-                  Refresh
-                </button>
-              )}
             </div>
 
             {selectedProjectId == null ? (
@@ -341,9 +351,6 @@ function Projects() {
               <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
                 <div className="workflows-head">
                   <div style={{ fontWeight: 700 }}>Workflows</div>
-                  <button type="button" className="btn" onClick={openCreateWorkflowModal} disabled={selectedProjectId == null}>
-                    Create
-                  </button>
                 </div>
                 {flowsLoading ? (
                   <div className="projects-muted">Loading…</div>
@@ -358,7 +365,31 @@ function Projects() {
                         </button>
                       </div>
                     ) : (
-                      flows.map((f) => {
+                      [{ id: -1, flow_name: null, created_at: '', updated_at: null } as FlowRow, ...flows].map((f) => {
+                        if (f.id === -1) {
+                          return (
+                            <div
+                              key="__create__"
+                              className="workflow-card workflow-create"
+                              role="button"
+                              tabIndex={0}
+                              onClick={openCreateWorkflowModal}
+                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openCreateWorkflowModal() }}
+                            >
+                              <div className="workflow-avatar workflow-avatar-create" aria-hidden>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                  <path d="M12 5v14" />
+                                  <path d="M5 12h14" />
+                                </svg>
+                              </div>
+                              <div className="workflow-meta">
+                                <div className="workflow-title">Create workflow</div>
+                                <div className="workflow-subtitle">Add a new workflow to this project</div>
+                              </div>
+                              <div />
+                            </div>
+                          )
+                        }
                         const name = (f.flow_name ?? 'Untitled').trim() || 'Untitled'
                         const initials = name.replace(/[^a-zA-Z0-9]+/g, ' ').trim().split(' ').filter(Boolean).slice(0, 2).map((w) => w[0] ?? '').join('').toUpperCase() || 'WF'
                         const menuOpen = openWorkflowMenuId === f.id

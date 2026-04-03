@@ -342,6 +342,8 @@ body {
   background: linear-gradient(180deg, color-mix(in oklab, var(--panel) 92%, var(--bg)) 0%, var(--panel) 100%);
   border-right: 1px solid var(--border);
   padding: 12px;
+  display: flex;
+  flex-direction: column;
 }
 
 .projects-sidebar-head {
@@ -386,6 +388,41 @@ body {
 .projects-nav {
   display: grid;
   gap: 4px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.projects-sidebar-foot {
+  margin-top: auto;
+  padding: 12px 6px 6px;
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+}
+
+.btn.sidebar-logout {
+  width: 100%;
+  border-radius: 12px;
+  background: transparent;
+  border-color: color-mix(in oklab, var(--border) 75%, transparent);
+}
+
+.btn.sidebar-logout:hover {
+  background: color-mix(in oklab, var(--hover-surface) 70%, transparent);
+}
+
+.btn.sidebar-account {
+  width: 100%;
+  border-radius: 12px;
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.btn.sidebar-account:hover {
+  background: color-mix(in oklab, var(--primary) 88%, #000000);
 }
 
 .projects-nav-divider {
@@ -607,6 +644,17 @@ body {
 
 .workflow-more {
   opacity: 0.9;
+}
+
+.workflow-card.workflow-create {
+  background: rgba(2, 6, 23, 0.25);
+  border-style: dashed;
+}
+
+.workflow-avatar.workflow-avatar-create {
+  background: color-mix(in oklab, var(--primary) 20%, rgba(2, 6, 23, 0.35));
+  border-color: color-mix(in oklab, var(--primary) 45%, rgba(148, 163, 184, 0.18));
+  color: #ffffff;
 }
 
 .wf-menu-overlay {
