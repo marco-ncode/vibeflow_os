@@ -27,8 +27,7 @@ function Navbar({
       <div className="links">
         {setupComplete && isAuthed && (
           <>
-            <NavLink to="/projects" className={({ isActive }) => isActive ? 'active' : ''}>Progetti</NavLink>
-            <NavLink to="/editor" className={({ isActive }) => isActive ? 'active' : ''}>Editor</NavLink>
+            <NavLink to="/projects" className={({ isActive }) => isActive ? 'nav-btn active' : 'nav-btn'}>Projects</NavLink>
           </>
         )}
         <div className="theme-toggle" role="group" aria-label="Theme">
