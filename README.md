@@ -1,17 +1,20 @@
-# VibeFlow (Stand-alone)
+# VibeFlow (stand-alone)
 
-VibeFlow è una webapp React/TypeScript containerizzata, pensata per essere eseguita in modalità stand-alone (self-hosted) con Supabase incluso nello stack (Auth + Postgres + API).
+VibeFlow è una webapp React/TypeScript containerizzata (SPA) pensata per essere eseguita in modalità stand-alone (self-hosted) con:
 
-Lo stack include anche Caddy come reverse proxy (unico punto di ingresso) e pubblica Supabase sotto `/supabase`.
+- Postgres “puro” come database
+- una piccola API Node.js per setup iniziale, autenticazione e CRUD principali
+- Caddy come reverse proxy (unico punto di ingresso)
+- Nginx dentro al container `web` solo per servire i file statici della SPA
 
 ## Requisiti
 
 - Docker + Docker Compose
-- Node.js 20+ (consigliato) + npm
+- Node.js 20+ + npm (per build, lint e generazione `.env`)
 
 ### Installare Node.js e npm
 
-Node.js serve per eseguire gli script `npm` (es. generazione `.env`) e per lo sviluppo frontend senza Docker.
+Node.js serve per eseguire gli script `npm` (es. generazione `.env`) e per lo sviluppo frontend.
 
 #### Ubuntu/Debian (NodeSource)
 
@@ -34,138 +37,267 @@ npm -v
 
 ## Avvio (stand-alone, consigliato)
 
-1. Genera automaticamente il file `.env` (chiavi + password) partendo da `.env.example`:
+1) Genera `.env` a partire da `.env.example`:
 
-   ```bash
-   npm run env:generate
-   ```
+```bash
+npm run env:generate
+```
 
-   Se `.env` esiste già, il comando non lo sovrascrive.
+Se `.env` esiste già, il comando non lo sovrascrive.
 
-2. Avvia lo stack:
+2) Avvia lo stack:
 
-   ```bash
-   docker compose up -d --build
-   ```
+```bash
+docker compose up -d --build
+```
 
-   In alternativa:
+Oppure:
 
-   ```bash
-   npm run stack:up
-   ```
+```bash
+npm run stack:up
+```
 
-3. Apri:
+3) Apri l’app:
 
-   - App: http://localhost:3000
-   - Supabase Studio: http://localhost:3002
-   - Supabase API: http://localhost:3000/supabase
+- http://localhost:3000
 
-## Primo avvio (creazione utente iniziale)
+### Test locale rapido (stack Docker)
+
+Verifica che i container siano su:
+
+```bash
+docker compose ps
+docker compose logs --tail=200 db api caddy web
+```
+
+Verifica setup (senza auth):
+
+```bash
+curl -i http://localhost:3000/api/setup/status
+```
+
+Bootstrap admin (una sola volta, poi torna 409):
+
+```bash
+curl -i -X POST http://localhost:3000/api/setup/init \
+  -H 'content-type: application/json' \
+  -d '{"email":"admin@example.com","password":"change-me-123"}'
+```
+
+Login e cookie sessione:
+
+```bash
+curl -i -c cookies.txt -X POST http://localhost:3000/api/auth/login \
+  -H 'content-type: application/json' \
+  -d '{"email":"admin@example.com","password":"change-me-123"}'
+```
+
+Chiamata protetta (usa il cookie salvato):
+
+```bash
+curl -i -b cookies.txt http://localhost:3000/api/projects
+```
+
+## Primo avvio (setup admin)
 
 Al primo avvio, se non esistono utenti, l’app reindirizza automaticamente a `/setup` per creare il primo utente (admin):
 
 - http://localhost:3000/setup
 
-Dopo la creazione, effettua il login:
+Dopo la creazione, la UI ti porta a `/login`:
 
 - http://localhost:3000/login
 
+Dopo il login, la landing page è `/projects`:
+
+- http://localhost:3000/projects
+
+## Flusso operativo (end-to-end)
+
+### Avvio Docker
+
+`docker compose up -d --build`:
+
+1) Avvia `db` (Postgres) e, se il volume è vuoto, esegue lo schema [init.sql](./db/init.sql)
+2) Attende `db` “healthy” e avvia `api`
+3) Avvia `web` (build frontend + Nginx) e poi `caddy` come entrypoint
+
+### Routing (Caddy)
+
+Tutto passa da `http://localhost:3000`:
+
+- `GET/POST/DELETE /api/*` → `api:3001`
+- `/*` → `web:80` (Nginx + SPA)
+
+Config: [Caddyfile](./Caddyfile)
+
+### Setup iniziale
+
+1) La SPA chiama `GET /api/setup/status`
+2) Se `setupComplete=false`, mostra `/setup`
+3) `POST /api/setup/init` crea il primo utente admin in `public.users`
+
+### Autenticazione e sessioni
+
+- Login: `POST /api/auth/login`
+- Logout: `POST /api/auth/logout`
+- Sessione: cookie `vf_session` (HttpOnly) + tabella `public.sessions`
+- Stato utente: `GET /api/auth/me`
+
+Nel frontend le chiamate API usano `credentials: 'include'` per inviare automaticamente il cookie (vedi [api.ts](./src/lib/api.ts)).
+
+## Stack Docker (single-host)
+
+Lo stack è definito in [docker-compose.yml](./docker-compose.yml).
+
+Servizi:
+
+- `db`: Postgres 16 + schema iniziale (mount di `./db/init.sql`)
+- `api`: Node.js (setup + auth + API)
+- `web`: build della SPA e serving statico via Nginx
+- `caddy`: reverse proxy pubblico (porta host `3000`)
+
+Persistenza:
+
+- DB: `./volumes/db/data`
+
+## Variabili ambiente
+
+File runtime: `.env` (non versionato).
+
+Generazione consigliata: `npm run env:generate` (script: [generate-env.mjs](./scripts/generate-env.mjs)).
+
+Chiavi:
+
+- `POSTGRES_PASSWORD`: password dell’utente DB `vibeflow`
+- `SESSION_SECRET`: segreto server-side per derivare hash token sessione
+- `SITE_URL`: URL pubblico (locale: `http://localhost:3000`, produzione: `https://example.com`)
+
+Nota:
+
+- Non committare mai `.env`
+- Se cambi `POSTGRES_PASSWORD` dopo aver già avviato Postgres con volume persistente, devi fare migrazione o reset del volume
+
+## API HTTP (contratto)
+
+Tutti gli endpoint sono sotto `/api`.
+
+Setup:
+
+- `GET /api/setup/status` → `{ setupComplete: boolean }`
+- `POST /api/setup/init` → crea il primo utente admin (solo se non esiste nessun utente)
+
+Auth:
+
+- `POST /api/auth/signup` → crea un utente (richiede setup completato)
+- `POST /api/auth/login` → set cookie sessione
+- `POST /api/auth/logout` → invalida sessione
+- `GET /api/auth/me` → `{ user: null | { id, email, is_admin, created_at, updated_at } }`
+- `POST /api/auth/change-password` → cambia password (richiede sessione)
+
+Projects:
+
+- `GET /api/projects` → `{ projects: ProjectRow[] }` (solo dell’utente loggato)
+- `POST /api/projects` → `{ project: ProjectRow }`
+- `DELETE /api/projects/:id` → `{ ok: true }`
+
+## Schema DB (minimo)
+
+Definito in [db/init.sql](./db/init.sql).
+
+Tabelle principali:
+
+- `public.users` (email, password_hash, is_admin)
+- `public.sessions` (token_hash, expires_at, user_id)
+- `public.projects` (user_id, project_name, project_scope)
+- `public.flows` (project_id, graph jsonb)
+
 ## Sviluppo (senza Docker)
 
-1. Installa dipendenze:
-
-   ```bash
-   npm install
-   ```
-
-2. Esporta variabili env (o usa un file `.env.local`):
-
-   - `VITE_SUPABASE_URL` (se omessa, usa automaticamente `${window.location.origin}/supabase`)
-   - `VITE_SUPABASE_ANON_KEY`
-   - `VITE_SETUP_API_BASE_URL` (default `/api`)
-
-3. Avvia:
-
-   ```bash
-   npm run dev
-   ```
-
-Durante lo sviluppo, le chiamate a `/api/*` vengono proxate a `http://localhost:3001` (vedi `vite.config.ts`).
-
-## VPS setup (Linux, production) [EN]
-
-Prerequisites:
-
-- Linux VPS with public IP and a DNS A/AAAA record pointing to your domain (e.g. `example.com`)
-- Open ports: `22`, `80`, `443`
-- Sudo user
-
-1) Install Docker + Compose (Ubuntu/Debian)
+Frontend:
 
 ```bash
-sudo apt update && sudo apt -y upgrade
-sudo apt -y install ca-certificates curl gnupg git ufw
-
-sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
-
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
-
-sudo apt update
-sudo apt -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-sudo usermod -aG docker $USER
-newgrp docker
-docker version
-docker compose version
+npm install
+npm run dev
 ```
 
-2) Firewall (recommended)
+Note:
+
+- `VITE_SETUP_API_BASE_URL` (default `/api`) definisce la base per le chiamate al backend
+- in dev, `/api/*` viene proxato a `VITE_DEV_API_TARGET` (default `http://localhost:3000`) (vedi `vite.config.ts`)
+
+### Scenario B (locale): Vite + API Node su `:3001` + Postgres locale
+
+Obiettivo: usare Vite in dev (porta 5173) e far proxare `/api/*` verso la API locale (porta 3001).
+
+1) Avvia Postgres
+
+Opzione consigliata (DB in Docker, solo per sviluppo):
 
 ```bash
-sudo ufw allow OpenSSH
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw enable
-sudo ufw status
+docker run --name vibeflow-db \
+  -e POSTGRES_USER=vibeflow \
+  -e POSTGRES_DB=vibeflow \
+  -e POSTGRES_PASSWORD=changeme \
+  -p 5432:5432 \
+  -v "$PWD/volumes/db/data:/var/lib/postgresql/data" \
+  -v "$PWD/db/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro" \
+  -d postgres:16-alpine
 ```
 
-3) Clone the repository
+2) Avvia la API locale (porta 3001)
 
 ```bash
-cd ~
+export NODE_ENV=development
+export PORT=3001
+export SESSION_SECRET='dev-secret-change-me'
+export SITE_URL='http://127.0.0.1:5173'
+export DATABASE_URL='postgres://vibeflow:changeme@127.0.0.1:5432/vibeflow'
+
+node setup-server/index.js
+```
+
+3) Avvia Vite e imposta il proxy verso la API locale
+
+In un altro terminale:
+
+```bash
+export VITE_DEV_API_TARGET='http://127.0.0.1:3001'
+npm run dev
+```
+
+4) Verifica rapida
+
+```bash
+curl -i http://127.0.0.1:3001/api/setup/status
+curl -i http://127.0.0.1:5173/api/setup/status
+```
+
+Nota: in dev la CORS è permissiva solo verso `localhost/127.0.0.1`. In produzione viene accettato solo `SITE_URL`.
+
+## VPS setup (Linux, production)
+
+1) Clona il repo e genera `.env`:
+
+```bash
 git clone https://github.com/marco-ncode/vibeflow_os.git
 cd vibeflow_os
-```
-
-4) Generate `.env` secrets
-
-The generator uses Node.js. If Node is not available, either install it (see “Installare Node.js e npm” above) or create `.env` manually from `.env.example`.
-
-```bash
 npm ci
 npm run env:generate
 ```
 
-Then set your public domain:
+2) Imposta il dominio pubblico in `.env`:
 
 ```bash
 sed -i 's|^SITE_URL=.*|SITE_URL=https://example.com|' .env
 ```
 
-5) Caddy with domain + HTTPS
-
-Replace `:80` in `Caddyfile` with your domain:
+3) Configura Caddy per dominio + HTTPS automatico (sostituisci `:80` con il dominio):
 
 ```caddyfile
 example.com {
-  handle_path /supabase/* {
-    reverse_proxy kong:8000
-  }
-
   handle /api/* {
-    reverse_proxy setup:3001
+    reverse_proxy api:3001
   }
 
   handle {
@@ -174,9 +306,7 @@ example.com {
 }
 ```
 
-6) Expose 80/443 and persist certs (docker-compose)
-
-Edit the `caddy` service in `docker-compose.yml`:
+4) Esporre 80/443 e persistere cert (in `docker-compose.yml`, service `caddy`):
 
 ```yml
 ports:
@@ -188,36 +318,16 @@ volumes:
   - caddy_config:/config
 ```
 
-Add volumes at the end of the file if missing:
-
-```yml
-volumes:
-  caddy_data:
-  caddy_config:
-```
-
-Update Supabase Studio public URL to match your domain:
-
-- `studio.environment.SUPABASE_PUBLIC_URL=https://example.com/supabase`
-
-7) Start the stack
+5) Avvia:
 
 ```bash
 docker compose up -d --build
 docker compose ps
 ```
 
-8) Verify
+Security note:
 
-- App: `https://example.com`
-- First-run setup: `https://example.com/setup`
-- Supabase Studio: `http://SERVER_IP:3002` (by default it is not exposed behind Caddy)
-
-Security notes:
-
-- Complete `/setup` immediately after bootstrapping. Until the first admin is created, the bootstrap endpoint is intentionally unauthenticated.
-- Consider restricting public exposure during bootstrap (e.g., firewall allow-list/VPN).
-- Backups: persist and back up `./volumes/db/data` and `./volumes/storage`.
+- Completa `/setup` subito dopo il bootstrap: finché non esiste un admin, l’endpoint di bootstrap è intenzionalmente pubblico.
 
 ## Comandi utili
 
@@ -226,237 +336,8 @@ npm run lint
 npm run build
 ```
 
-## Panoramica architettura
-
-Questo repository contiene:
-
-- Frontend: React + TypeScript + Vite (UI principale)
-- Setup service: micro-servizio Node.js che gestisce il “first run” (creazione guidata del primo utente)
-- Supabase self-hosted: Postgres + Auth (GoTrue) + PostgREST + Storage + Realtime + Studio
-- Reverse proxy: Caddy come entrypoint unico (routing verso webapp, setup API e Supabase)
-
-### Routing (Caddy)
-
-Il reverse proxy espone tutto su `http://localhost:3000`:
-
-- `GET/POST /api/*` → setup service (es. `/api/setup/status`, `/api/setup/init`)
-- `/supabase/*` → Supabase (via Kong) (es. `/supabase/auth/v1`, `/supabase/rest/v1`)
-- `/*` → webapp
-
-Configurazione: [Caddyfile](./Caddyfile)
-
-### Guida: configurare Caddy (dominio/HTTPS)
-
-Questa repo include già un `Caddyfile` pronto per instradare:
-
-- `/supabase/*` → `kong:8000`
-- `/api/*` → `setup:3001`
-- tutto il resto → `web:80`
-
-#### Caso 1: locale (default)
-
-Con lo stack Docker attuale, Caddy ascolta in container su `:80` e viene esposto sulla macchina host su `http://localhost:3000` tramite:
-
-- `docker-compose.yml` → `caddy.ports: "3000:80"`
-- `.env` → `SITE_URL=http://localhost:3000`
-
-Non serve modificare nulla.
-
-#### Caso 2: produzione su un dominio con HTTPS automatico
-
-1. Punta il DNS del dominio (A/AAAA) verso il server dove gira Docker.
-2. Aggiorna `.env` impostando il dominio pubblico:
-
-   ```env
-   SITE_URL=https://example.com
-   ```
-
-3. Aggiorna `docker-compose.yml` per esporre le porte standard e persistere i certificati:
-
-   ```yml
-   caddy:
-     ports:
-       - "80:80"
-       - "443:443"
-     volumes:
-       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-       - caddy_data:/data
-       - caddy_config:/config
-   ```
-
-   e aggiungi (se assente) in fondo al file:
-
-   ```yml
-   volumes:
-     caddy_data:
-     caddy_config:
-   ```
-
-4. Aggiorna `Caddyfile` sostituendo `:80` con il tuo dominio:
-
-   ```caddyfile
-   example.com {
-     handle_path /supabase/* {
-       reverse_proxy kong:8000
-     }
-
-     handle /api/* {
-       reverse_proxy setup:3001
-     }
-
-     handle {
-       reverse_proxy web:80
-     }
-   }
-   ```
-
-5. Aggiorna la URL pubblica di Supabase Studio (in `docker-compose.yml`) per farla combaciare con il dominio:
-
-   - `studio.environment.SUPABASE_PUBLIC_URL=https://example.com/supabase`
-
-6. Riavvia lo stack:
-
-   ```bash
-   docker compose up -d --build
-   ```
-
-Note operative:
-
-- HTTPS automatico richiede che il server sia raggiungibile su `80/tcp` e `443/tcp` dall’esterno.
-- Se cambi il path pubblico di Supabase (diverso da `/supabase`), vanno aggiornati sia il `Caddyfile` sia il client (es. `VITE_SUPABASE_URL` oppure l’assunzione `${window.location.origin}/supabase`).
-
-### Auth e “wizard” primo avvio
-
-Flusso:
-
-1. L’app controlla lo stato del setup chiamando `GET /api/setup/status`
-2. Se `setupComplete=false`, reindirizza a `/setup` e consente la creazione del primo utente admin
-3. Dopo la creazione del primo utente, l’accesso avviene tramite `/login`
-4. Le route principali (Home/Editor) sono protette: senza sessione Supabase attiva si viene reindirizzati al login
-
-Punti chiave:
-
-- Routing e guard: [App.tsx](./src/App.tsx)
-- UI setup: [Setup.tsx](./src/pages/Setup.tsx)
-- UI login/signup: [Login.tsx](./src/pages/Login.tsx)
-- API client setup: [setupApi.ts](./src/lib/setupApi.ts)
-- Client Supabase: [supabase.ts](./src/lib/supabase.ts)
-
-## Stack Docker (sviluppo/produzione “single host”)
-
-Lo stack è definito in [docker-compose.yml](./docker-compose.yml).
-
-Servizi principali:
-
-- `caddy`: entrypoint pubblico (porta host 3000)
-- `web`: webapp buildata e servita (nginx interno)
-- `setup`: setup service (HTTP)
-- `db`: Postgres (immagine Supabase)
-- `auth`: GoTrue (Supabase Auth)
-- `rest`: PostgREST
-- `realtime`: Supabase Realtime
-- `storage`: Supabase Storage
-- `meta`: postgres-meta (dipendenza di Studio)
-- `studio`: Supabase Studio (porta host 3002)
-- `kong`: gateway interno usato dagli altri servizi Supabase
-
-Persistenza:
-
-- DB: `./volumes/db/data`
-- Storage: `./volumes/storage`
-
-## Configurazione e segreti
-
-### `.env` (runtime)
-
-Lo stack usa un file `.env` locale (non versionato).
-
-- Generazione consigliata: `npm run env:generate`
-- Avvio con generazione automatica: `npm run stack:up`
-
-Script: [generate-env.mjs](./scripts/generate-env.mjs)
-
-Nota importante:
-
-- Non avviare `docker compose up` senza avere prima un `.env` valido (altrimenti alcuni servizi inizializzano il DB con credenziali vuote o incoerenti e poi vanno in errore).
-- Dopo il primo avvio con volumi persistenti (`./volumes/db/data`), non cambiare `POSTGRES_PASSWORD` in `.env` senza fare una migrazione: i ruoli DB creati al bootstrap rimangono con la password precedente.
-
-Se hai già avviato lo stack e cambiando `.env` è andato in errore (Auth/REST/Storage/Realtime in restart), puoi:
-
-- Reset completo (perdita dati): `docker compose down -v` + cancellazione `./volumes/*`
-- Fix senza wipe (riallineamento password ruoli DB):
-
-  ```bash
-  docker compose exec -T db sh -lc 'PGPASSWORD="$POSTGRES_PASSWORD" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c "
-  ALTER ROLE supabase_auth_admin WITH PASSWORD '\''$POSTGRES_PASSWORD'\'';
-  ALTER ROLE authenticator WITH PASSWORD '\''$POSTGRES_PASSWORD'\'';
-  ALTER ROLE supabase_storage_admin WITH PASSWORD '\''$POSTGRES_PASSWORD'\'';
-  "'
-  docker compose up -d --force-recreate auth rest storage realtime
-  ```
-
-### Cosa viene generato
-
-Il generatore crea:
-
-- `POSTGRES_PASSWORD`
-- `JWT_SECRET`
-- `ANON_KEY` (JWT firmato con `JWT_SECRET`, `role=anon`)
-- `SERVICE_ROLE_KEY` (JWT firmato con `JWT_SECRET`, `role=service_role`)
-- `SECRET_KEY_BASE`
-- `SITE_URL` (default `http://localhost:3000`, viene letto da `.env.example` se presente)
-
-Importante:
-
-- Non committare mai `.env`
-- Non esporre mai `SERVICE_ROLE_KEY` nel frontend
-
-## Dettagli Supabase self-hosted
-
-Questo progetto usa una composizione “minimal” di Supabase self-hosted (Auth/REST/Realtime/Storage).
-
-Configurazione Kong: [kong.yml](./supabase/kong.yml)
-
-Nota: in questa configurazione la protezione via API keys su Kong non è abilitata a livello gateway. Il controllo accessi sui dati va gestito tramite JWT e (quando introdotte) policy RLS su Postgres.
-
-## Sviluppo frontend (no Docker)
-
-Se vuoi lavorare solo sul frontend:
-
-- `npm run dev`
-- Proxy dev per `/api/*` → `http://localhost:3001` in [vite.config.ts](./vite.config.ts)
-- Supabase URL:
-  - se `VITE_SUPABASE_URL` è assente, il client usa `${window.location.origin}/supabase`
-  - altrimenti usa `VITE_SUPABASE_URL`
-
-## Struttura repository (per orientarsi)
-
-- `src/` frontend
-  - `pages/` pagine (Home, Editor, Setup, Login)
-  - `components/` componenti e node types ReactFlow
-  - `store/` stato (Zustand)
-  - `lib/` client Supabase e chiamate setup API
-- `setup-server/` micro-servizio per first-run setup
-- `supabase/` configurazione gateway (Kong)
-- `docker-compose.yml` stack completo
-- `Caddyfile` reverse proxy entrypoint
-- `scripts/` utility (generazione `.env`)
-
-## Note per contributor / agenti
-
-- Obiettivo: rendere VibeFlow realmente multi-tenant sui dati (progetti/flow per utente) richiede:
-  - persistenza su Postgres
-  - schema dati (es. `projects`, `graphs`, `graph_nodes`, `graph_edges`)
-  - Row Level Security (RLS) e policy per `auth.uid()`
-- Il setup service usa `SERVICE_ROLE_KEY` per creare il primo utente (Admin API):
-  - codice: [setup-server/index.js](./setup-server/index.js)
-  - endpoint: `POST /api/setup/init`
-- Ogni modifica che tocca Auth/compose dovrebbe includere:
-  - `npm run lint`
-  - `npm run build`
-
 ## Troubleshooting rapido
 
-- UI non carica dopo refresh su route: verificare che il proxy serva SPA fallback (Caddy già instrada tutto su `web`)
-- Setup sempre “non completato”: controllare log `setup` e che Supabase Auth sia raggiungibile via `/supabase/auth/v1`
-- Login fallisce: verificare che `ANON_KEY` nel `.env` corrisponda al `JWT_SECRET` usato dai servizi Supabase
+- Reset DB (perdita dati): `docker compose down` + cancella `./volumes/db/data` + `docker compose up -d --build`
+- Controllo log: `docker compose logs -f --tail=200 db api caddy web`
+- Setup non completato: verifica che `db/init.sql` sia stato eseguito (primo avvio con volume vuoto) e che `api` veda il DB come healthy

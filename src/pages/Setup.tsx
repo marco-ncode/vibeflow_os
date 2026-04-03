@@ -17,7 +17,7 @@ function Setup() {
     setMessage(null)
     try {
       await initFirstUser({ email, password })
-      setMessage('Utente iniziale creato. Ora puoi effettuare il login.')
+      window.location.replace('/login')
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Errore imprevisto')
     } finally {
@@ -73,4 +73,3 @@ function Setup() {
 }
 
 export default Setup
-

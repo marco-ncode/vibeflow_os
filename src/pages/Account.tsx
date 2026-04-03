@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { authChangePassword, authLogout, authMe } from '../lib/api'
 
 function Account() {
   const navigate = useNavigate()
@@ -10,21 +10,14 @@ function Account() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
-  const [newEmail, setNewEmail] = useState('')
-  const [emailSaving, setEmailSaving] = useState(false)
-
+  const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordSaving, setPasswordSaving] = useState(false)
 
-  const canUpdateEmail = useMemo(() => {
-    const next = newEmail.trim()
-    return next.length > 0 && next !== email && !emailSaving
-  }, [newEmail, email, emailSaving])
-
   const canUpdatePassword = useMemo(() => {
-    return newPassword.length >= 8 && newPassword === confirmPassword && !passwordSaving
-  }, [newPassword, confirmPassword, passwordSaving])
+    return currentPassword.length > 0 && newPassword.length >= 8 && newPassword === confirmPassword && !passwordSaving
+  }, [currentPassword, newPassword, confirmPassword, passwordSaving])
 
   useEffect(() => {
     let cancelled = false
@@ -32,47 +25,29 @@ function Account() {
       setLoading(true)
       setError(null)
       setMessage(null)
-      const { data, error: err } = await supabase.auth.getUser()
-      if (cancelled) return
-      if (err) {
-        setError(err.message)
-        setLoading(false)
-        return
+      try {
+        const { user } = await authMe()
+        if (cancelled) return
+        if (!user) {
+          navigate('/login', { replace: true })
+          return
+        }
+        setEmail(user.email)
+      } catch (err) {
+        if (cancelled) return
+        setError(err instanceof Error ? err.message : 'Errore imprevisto')
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      const userEmail = data.user?.email ?? ''
-      setEmail(userEmail)
-      setNewEmail(userEmail)
-      setLoading(false)
     })()
     return () => { cancelled = true }
-  }, [])
+  }, [navigate])
 
   async function onLogout() {
     setError(null)
     setMessage(null)
-    const { error: err } = await supabase.auth.signOut()
-    if (err) {
-      setError(err.message)
-      return
-    }
-    navigate('/login', { replace: true })
-  }
-
-  async function onUpdateEmail() {
-    if (!canUpdateEmail) return
-    setEmailSaving(true)
-    setError(null)
-    setMessage(null)
-    const { data, error: err } = await supabase.auth.updateUser({ email: newEmail.trim() })
-    if (err) {
-      setError(err.message)
-      setEmailSaving(false)
-      return
-    }
-    const nextEmail = data.user?.email ?? email
-    setEmail(nextEmail)
-    setMessage('Email aggiornabile: controlla la posta per confermare, se richiesto.')
-    setEmailSaving(false)
+    await authLogout().catch(() => null)
+    window.location.replace('/login')
   }
 
   async function onUpdatePassword() {
@@ -80,15 +55,17 @@ function Account() {
     setPasswordSaving(true)
     setError(null)
     setMessage(null)
-    const { error: err } = await supabase.auth.updateUser({ password: newPassword })
-    if (err) {
-      setError(err.message)
+    try {
+      await authChangePassword({ currentPassword, newPassword })
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setMessage('Password aggiornata.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Errore imprevisto')
       setPasswordSaving(false)
       return
     }
-    setNewPassword('')
-    setConfirmPassword('')
-    setMessage('Password aggiornata.')
     setPasswordSaving(false)
   }
 
@@ -112,16 +89,17 @@ function Account() {
             <section className="card">
               <h2 style={{ marginTop: 0 }}>Email</h2>
               <div className="field">
-                <label>Email attuale</label>
-                <input value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+                <label>Email</label>
+                <input value={email} readOnly />
               </div>
-              <button className="btn primary" onClick={() => void onUpdateEmail()} disabled={!canUpdateEmail}>
-                Aggiorna email
-              </button>
             </section>
 
             <section className="card">
               <h2 style={{ marginTop: 0 }}>Password</h2>
+              <div className="field">
+                <label>Password attuale</label>
+                <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" />
+              </div>
               <div className="field">
                 <label>Nuova password</label>
                 <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Minimo 8 caratteri" />

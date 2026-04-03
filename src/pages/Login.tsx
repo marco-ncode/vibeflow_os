@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { authLogin, authSignup } from '../lib/api'
 
 function Login() {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
@@ -18,12 +18,11 @@ function Login() {
     setMessage(null)
     try {
       if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) throw error
+        await authLogin({ email, password })
+        window.location.replace('/projects')
       } else {
-        const { error } = await supabase.auth.signUp({ email, password })
-        if (error) throw error
-        setMessage('Registrazione completata. Se è richiesta conferma email, controlla la casella di posta.')
+        await authSignup({ email, password })
+        setMessage('Registrazione completata.')
       }
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Errore imprevisto')
@@ -83,4 +82,3 @@ function Login() {
 }
 
 export default Login
-

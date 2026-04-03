@@ -1,13 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { supabase } from '../lib/supabase'
-
-type ProjectRow = {
-  id: number
-  project_name: string | null
-  project_scope: string | null
-  created_at: string
-  updated_at: string | null
-}
+import { createProject, deleteProject, listProjects, type ProjectRow } from '../lib/api'
 
 function Projects() {
   const [projects, setProjects] = useState<ProjectRow[]>([])
@@ -23,18 +15,15 @@ function Projects() {
   const loadProjects = useCallback(async () => {
     setLoading(true)
     setError(null)
-    const { data, error: err } = await supabase
-      .from('projects')
-      .select('id,project_name,project_scope,created_at,updated_at')
-      .order('created_at', { ascending: false })
-    if (err) {
-      setError(err.message)
+    try {
+      const data = await listProjects()
+      setProjects(data ?? [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Errore imprevisto')
       setProjects([])
+    } finally {
       setLoading(false)
-      return
     }
-    setProjects(data ?? [])
-    setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -45,34 +34,32 @@ function Projects() {
     if (!canCreate) return
     setCreating(true)
     setError(null)
-    const payload = {
-      project_name: name.trim(),
-      project_scope: scope.trim().length ? scope.trim() : null,
-    }
-    const { data, error: err } = await supabase
-      .from('projects')
-      .insert(payload)
-      .select('id,project_name,project_scope,created_at,updated_at')
-      .single()
-    if (err) {
-      setError(err.message)
+    try {
+      const data = await createProject({
+        project_name: name.trim(),
+        project_scope: scope.trim().length ? scope.trim() : null,
+      })
+      setProjects((prev) => [data, ...prev])
+      setName('')
+      setScope('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Errore imprevisto')
       setCreating(false)
       return
+    } finally {
+      setCreating(false)
     }
-    setProjects((prev) => [data, ...prev])
-    setName('')
-    setScope('')
-    setCreating(false)
   }
 
   async function onDelete(id: number) {
     setError(null)
-    const { error: err } = await supabase.from('projects').delete().eq('id', id)
-    if (err) {
-      setError(err.message)
+    try {
+      await deleteProject(id)
+      setProjects((prev) => prev.filter((p) => p.id !== id))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Errore imprevisto')
       return
     }
-    setProjects((prev) => prev.filter((p) => p.id !== id))
   }
 
   return (
