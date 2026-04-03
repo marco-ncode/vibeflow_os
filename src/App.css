@@ -323,3 +323,124 @@ body {
   padding: 10px 12px;
   font-size: 12px;
 }
+
+.projects-shell {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.projects-grid {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.projects-sidebar {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.projects-sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.projects-sidebar-title {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.projects-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 14px 0;
+}
+
+.projects-muted {
+  color: var(--muted);
+}
+
+.projects-error {
+  margin: 10px 0;
+  color: #fecaca;
+  word-break: break-word;
+}
+
+.projects-list {
+  display: grid;
+  gap: 10px;
+}
+
+.project-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.project-select {
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 10px 12px;
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+}
+
+.project-select:hover {
+  background: var(--hover-surface);
+}
+
+.project-select.active {
+  border-color: color-mix(in oklab, var(--primary) 65%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 18%, transparent);
+}
+
+.project-name {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.project-scope {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.project-delete {
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.projects-main {
+  min-width: 0;
+}
+
+.projects-main-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.flows-list {
+  display: grid;
+  gap: 10px;
+}
+
+.flow-item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: color-mix(in oklab, var(--panel) 55%, var(--surface));
+}

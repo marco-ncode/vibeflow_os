@@ -51,6 +51,13 @@ export type ProjectRow = {
   updated_at: string | null
 }
 
+export type FlowRow = {
+  id: number
+  flow_name: string | null
+  created_at: string
+  updated_at: string | null
+}
+
 export async function listProjects(): Promise<ProjectRow[]> {
   const res = await apiFetch<{ projects: ProjectRow[] }>('/projects', { method: 'GET' })
   return res.projects ?? []
@@ -63,4 +70,14 @@ export async function createProject(input: { project_name: string, project_scope
 
 export async function deleteProject(id: number): Promise<void> {
   await apiFetch<{ ok: true }>(`/projects/${id}`, { method: 'DELETE' })
+}
+
+export async function listFlows(projectId: number): Promise<FlowRow[]> {
+  const res = await apiFetch<{ flows: FlowRow[] }>(`/projects/${projectId}/flows`, { method: 'GET' })
+  return res.flows ?? []
+}
+
+export async function createFlow(projectId: number, input: { flow_name: string | null }): Promise<FlowRow> {
+  const res = await apiFetch<{ flow: FlowRow }>(`/projects/${projectId}/flows`, { method: 'POST', body: JSON.stringify(input) })
+  return res.flow
 }

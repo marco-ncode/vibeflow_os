@@ -428,6 +428,65 @@ const server = http.createServer(async (req, res) => {
       return
     }
 
+    if (req.method === 'GET' && /^\/api\/projects\/\d+\/flows$/.test(url.pathname)) {
+      const user = await authFromRequest(req)
+      if (!user) {
+        sendJson(req, res, 401, { error: 'unauthorized' })
+        return
+      }
+
+      const parts = url.pathname.split('/')
+      const projectId = Number(parts[3])
+      if (!Number.isFinite(projectId)) {
+        sendJson(req, res, 400, { error: 'invalid_input' })
+        return
+      }
+
+      const { rows: owned } = await pool.query('select 1 from public.projects where id = $1 and user_id = $2 limit 1', [projectId, user.id])
+      if (!owned?.length) {
+        sendJson(req, res, 404, { error: 'not_found' })
+        return
+      }
+
+      const { rows } = await pool.query(
+        'select id, flow_name, created_at, updated_at from public.flows where project_id = $1 order by created_at desc',
+        [projectId],
+      )
+      sendJson(req, res, 200, { flows: rows ?? [] })
+      return
+    }
+
+    if (req.method === 'POST' && /^\/api\/projects\/\d+\/flows$/.test(url.pathname)) {
+      const user = await authFromRequest(req)
+      if (!user) {
+        sendJson(req, res, 401, { error: 'unauthorized' })
+        return
+      }
+
+      const parts = url.pathname.split('/')
+      const projectId = Number(parts[3])
+      if (!Number.isFinite(projectId)) {
+        sendJson(req, res, 400, { error: 'invalid_input' })
+        return
+      }
+
+      const { rows: owned } = await pool.query('select 1 from public.projects where id = $1 and user_id = $2 limit 1', [projectId, user.id])
+      if (!owned?.length) {
+        sendJson(req, res, 404, { error: 'not_found' })
+        return
+      }
+
+      const body = await readJson(req)
+      const flowName = String(body?.flow_name ?? '').trim()
+
+      const { rows } = await pool.query(
+        'insert into public.flows (project_id, flow_name) values ($1, $2) returning id, flow_name, created_at, updated_at',
+        [projectId, flowName || null],
+      )
+      sendJson(req, res, 200, { flow: rows?.[0] ?? null })
+      return
+    }
+
     if (req.method === 'DELETE' && /^\/api\/projects\/\d+$/.test(url.pathname)) {
       const user = await authFromRequest(req)
       if (!user) {
