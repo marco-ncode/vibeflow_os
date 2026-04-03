@@ -339,21 +339,6 @@ ${json}
     downloadFile('vibeflow-package.txt', pkg)
   }
 
-  const handleImportProject = (file?: File) => {
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      try {
-        const obj = JSON.parse(String(reader.result))
-        if (Array.isArray(obj.nodes) && Array.isArray(obj.edges)) {
-          setNodes(obj.nodes)
-          setEdges(obj.edges)
-        }
-      } catch {/* ignore */}
-    }
-    reader.readAsText(file)
-  }
-
   // --- Grouping helpers ---
   const createGroupFromSelection = () => {
     if (selectedIds.length < 2) return
@@ -442,8 +427,8 @@ ${json}
     <div className="editor">
       <div className="toolbar">
         <button className="btn" onClick={reset}>Reset</button>
-        <div className="toolbar-note">Per selezionare più nodi tieni premuto <strong>SHIFT</strong></div>
-        <button className="btn" disabled={selectedIds.length < 2} onClick={createGroupFromSelection}>Crea Gruppo dai selezionati</button>
+        <div className="toolbar-note">To select multiple nodes hold <strong>SHIFT</strong></div>
+        <button className="btn" disabled={selectedIds.length < 2} onClick={createGroupFromSelection}>Create Group from Selection</button>
       </div>
       <div className="workspace">
         <NodePalette />
@@ -476,14 +461,11 @@ ${json}
                 <label className="menu-title">Vibe Option</label>
                 <button
                   className="menu-close"
-                  aria-label="Chiudi"
-                  title="Chiudi"
+                  aria-label="Close"
+                  title="Close"
                   onClick={() => setShowMenu(false)}
                 >✕</button>
               </div>
-              <input type="file" onChange={(e) => handleImportProject(e.target.files?.[0])} style={{ display: 'none' }} id="import-ide" />
-              <label htmlFor="import-ide" className="btn big">Import IDE project</label>
-
               <button className="btn big" onClick={handleExportPrompt}>Export AI Prompt</button>
               <button className="btn big" onClick={handleExportJSON}>Export JSON</button>
               <button className="btn big" onClick={handleExportCombined}>Export Combined</button>
@@ -497,7 +479,7 @@ ${json}
           )}
         </div>
         <div className="properties">
-          <h4>Proprietà</h4>
+          <h4>Properties</h4>
           {selectedNode ? (
             <>
               <div className="field">
@@ -509,7 +491,7 @@ ${json}
               </div>
               {selectedNode.type === 'group' && (
                 <div className="field">
-                  <label>Azioni Gruppo</label>
+                  <label>Group Actions</label>
                   <div className="conn-list">
                     <button className="btn" onClick={() => deleteGroupOnly(selectedNode)}>Delete Group</button>
                     <button className="btn danger" onClick={() => deleteGroupAndContent(selectedNode)}>Delete Group and Content</button>
@@ -517,7 +499,7 @@ ${json}
                 </div>
               )}
               <div className="field">
-                <label>Descrizione</label>
+                <label>Description</label>
                 <textarea
                   rows={4}
                   value={String(selectedNode.data?.description ?? '')}
@@ -531,7 +513,7 @@ ${json}
                     checked={Boolean(selectedNode.data?.showDescription ?? true)}
                     onChange={(e) => updateNodeData(selectedNode.id, { showDescription: e.target.checked })}
                   />
-                  &nbsp;Mostra descrizione sul nodo
+                  &nbsp;Show description on node
                 </label>
               </div>
               {selectedNode.type === 'prompt' && (
@@ -546,7 +528,7 @@ ${json}
               )}
               {selectedNode.type === 'transform' && (
                 <div className="field">
-                  <label>Operazione</label>
+                  <label>Operation</label>
                   <input
                     value={String(selectedNode.data?.operation ?? '')}
                     onChange={(e) => updateNodeData(selectedNode.id, { operation: e.target.value })}
@@ -628,7 +610,7 @@ ${json}
               )}
               {selectedNode.type === 'storage' && (
                 <div className="field">
-                  <label>Risorsa</label>
+                  <label>Resource</label>
                   <input
                     value={String(selectedNode.data?.resource ?? '')}
                     onChange={(e) => updateNodeData(selectedNode.id, { resource: e.target.value })}
@@ -637,7 +619,7 @@ ${json}
               )}
               {selectedNode.type === 'decision' && (
                 <div className="field">
-                  <label>Condizione</label>
+                  <label>Condition</label>
                   <input
                     value={String(selectedNode.data?.condition ?? '')}
                     onChange={(e) => updateNodeData(selectedNode.id, { condition: e.target.value })}
@@ -646,7 +628,7 @@ ${json}
               )}
             </>
           ) : (
-            <p>Nessun nodo selezionato</p>
+            <p>No node selected</p>
           )}
         </div>
       </div>
