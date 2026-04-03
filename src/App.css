@@ -325,42 +325,47 @@ body {
 }
 
 .projects-shell {
-  padding: 24px;
-  max-width: 1200px;
-  margin: 0 auto;
+  height: calc(100vh - 60px);
 }
 
 .projects-grid {
   display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 16px;
-  align-items: start;
+  grid-template-columns: 280px 1fr;
+  height: 100%;
 }
 
 .projects-sidebar {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 14px;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--panel) 92%, var(--bg)) 0%, var(--panel) 100%);
+  border-right: 1px solid var(--border);
+  padding: 12px;
 }
 
 .projects-sidebar-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
+  gap: 10px;
+  padding: 6px 6px 10px;
 }
 
-.projects-sidebar-title {
+.projects-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.projects-brand-title {
   font-weight: 800;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.projects-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 14px 0;
+.projects-brand-caret {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .projects-muted {
@@ -368,62 +373,133 @@ body {
 }
 
 .projects-error {
-  margin: 10px 0;
+  margin: 0 6px 10px;
   color: #fecaca;
   word-break: break-word;
+  font-size: 12px;
 }
 
-.projects-list {
-  display: grid;
-  gap: 10px;
-}
-
-.project-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
-  align-items: start;
-}
-
-.project-select {
-  text-align: left;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  color: var(--text);
-  padding: 10px 12px;
-  cursor: pointer;
+.projects-nav {
   display: grid;
   gap: 4px;
 }
 
-.project-select:hover {
-  background: var(--hover-surface);
+.projects-nav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 6px;
 }
 
-.project-select.active {
-  border-color: color-mix(in oklab, var(--primary) 65%, var(--border));
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 18%, transparent);
+.projects-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
 }
 
-.project-name {
-  font-weight: 800;
-  letter-spacing: -0.01em;
+.projects-nav-item:hover {
+  background: color-mix(in oklab, var(--hover-surface) 75%, transparent);
+  border-color: color-mix(in oklab, var(--border) 60%, transparent);
 }
 
-.project-scope {
+.projects-nav-item.create .projects-nav-icon {
+  color: color-mix(in oklab, var(--primary) 85%, var(--text));
+}
+
+.projects-nav-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--muted);
-  font-size: 12px;
-  white-space: pre-wrap;
+  flex: 0 0 auto;
 }
 
-.project-delete {
-  padding: 10px 12px;
-  border-radius: 12px;
+.projects-nav-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.projects-project-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: center;
+  padding: 2px;
+  border-radius: 10px;
+}
+
+.projects-project-row.active {
+  background: color-mix(in oklab, var(--hover-surface) 55%, transparent);
+}
+
+.projects-project-select {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+
+.projects-project-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0.75;
+}
+
+.projects-project-row:hover .projects-project-actions {
+  opacity: 1;
+}
+
+.icon-btn {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn:hover {
+  background: color-mix(in oklab, var(--hover-surface) 75%, transparent);
+  border-color: color-mix(in oklab, var(--border) 60%, transparent);
+  color: var(--text);
+}
+
+.icon-btn.subtle {
+  padding: 7px;
+  border-radius: 9px;
+}
+
+.icon-btn.subtle.danger:hover {
+  color: #fecaca;
+  border-color: color-mix(in oklab, #ef4444 55%, var(--border));
+  background: color-mix(in oklab, #ef4444 14%, transparent);
 }
 
 .projects-main {
   min-width: 0;
+  padding: 18px 22px;
 }
 
 .projects-main-head {
@@ -443,4 +519,46 @@ body {
   border-radius: 12px;
   padding: 12px;
   background: color-mix(in oklab, var(--panel) 55%, var(--surface));
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.58);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 520px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 12px 44px rgba(0, 0, 0, 0.3);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.modal-body {
+  padding: 14px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 14px 14px;
 }
