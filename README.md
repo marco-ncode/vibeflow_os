@@ -1,20 +1,20 @@
-# VibeFlow (stand-alone)
+# VibeFlow (standalone)
 
-VibeFlow è una webapp React/TypeScript containerizzata (SPA) pensata per essere eseguita in modalità stand-alone (self-hosted) con:
+VibeFlow is a containerized React/TypeScript web app (SPA) meant to run in standalone (self-hosted) mode with:
 
-- Postgres “puro” come database
-- una piccola API Node.js per setup iniziale, autenticazione e CRUD principali
-- Caddy come reverse proxy (unico punto di ingresso)
-- Nginx dentro al container `web` solo per servire i file statici della SPA
+- “plain” Postgres as the database
+- a small Node.js API for initial setup, authentication, and core CRUD endpoints
+- Caddy as the reverse proxy (single public entrypoint)
+- Nginx inside the `web` container only to serve the SPA static files
 
-## Requisiti
+## Requirements
 
 - Docker + Docker Compose
-- Node.js 20+ + npm (per build, lint e generazione `.env`)
+- Node.js 20+ + npm (for build, lint, and `.env` generation)
 
-### Installare Node.js e npm
+### Install Node.js and npm
 
-Node.js serve per eseguire gli script `npm` (es. generazione `.env`) e per lo sviluppo frontend.
+Node.js is used to run `npm` scripts (e.g. `.env` generation) and for frontend development.
 
 #### Ubuntu/Debian (NodeSource)
 
@@ -35,48 +35,48 @@ node -v
 npm -v
 ```
 
-## Avvio (stand-alone, consigliato)
+## Start (standalone, recommended)
 
-1) Genera `.env` a partire da `.env.example`:
+1) Generate `.env` from `.env.example`:
 
 ```bash
 npm run env:generate
 ```
 
-Se `.env` esiste già, il comando non lo sovrascrive.
+If `.env` already exists, the command will not overwrite it.
 
-2) Avvia lo stack:
+2) Start the stack:
 
 ```bash
 docker compose up -d --build
 ```
 
-Oppure:
+Or:
 
 ```bash
 npm run stack:up
 ```
 
-3) Apri l’app:
+3) Open the app:
 
 - http://localhost:3000
 
-### Test locale rapido (stack Docker)
+### Quick local test (Docker stack)
 
-Verifica che i container siano su:
+Check containers:
 
 ```bash
 docker compose ps
 docker compose logs --tail=200 db api caddy web
 ```
 
-Verifica setup (senza auth):
+Check setup (no auth):
 
 ```bash
 curl -i http://localhost:3000/api/setup/status
 ```
 
-Bootstrap admin (una sola volta, poi torna 409):
+Bootstrap admin (only once, then it returns 409):
 
 ```bash
 curl -i -X POST http://localhost:3000/api/setup/init \
@@ -84,7 +84,7 @@ curl -i -X POST http://localhost:3000/api/setup/init \
   -d '{"email":"admin@example.com","password":"change-me-123"}'
 ```
 
-Login e cookie sessione:
+Login and session cookie:
 
 ```bash
 curl -i -c cookies.txt -X POST http://localhost:3000/api/auth/login \
@@ -92,127 +92,127 @@ curl -i -c cookies.txt -X POST http://localhost:3000/api/auth/login \
   -d '{"email":"admin@example.com","password":"change-me-123"}'
 ```
 
-Chiamata protetta (usa il cookie salvato):
+Protected call (uses the saved cookie):
 
 ```bash
 curl -i -b cookies.txt http://localhost:3000/api/projects
 ```
 
-## Primo avvio (setup admin)
+## First run (admin setup)
 
-Al primo avvio, se non esistono utenti, l’app reindirizza automaticamente a `/setup` per creare il primo utente (admin):
+On first run, if there are no users, the app automatically redirects to `/setup` to create the first (admin) user:
 
 - http://localhost:3000/setup
 
-Dopo la creazione, la UI ti porta a `/login`:
+After creation, the UI takes you to `/login`:
 
 - http://localhost:3000/login
 
-Dopo il login, la landing page è `/projects`:
+After login, the landing page is `/projects`:
 
 - http://localhost:3000/projects
 
-## Flusso operativo (end-to-end)
+## Operational flow (end-to-end)
 
-### Avvio Docker
+### Docker startup
 
 `docker compose up -d --build`:
 
-1) Avvia `db` (Postgres) e, se il volume è vuoto, esegue lo schema [init.sql](./db/init.sql)
-2) Attende `db` “healthy” e avvia `api`
-3) Avvia `web` (build frontend + Nginx) e poi `caddy` come entrypoint
+1) Starts `db` (Postgres) and, if the volume is empty, runs the schema [init.sql](./db/init.sql)
+2) Waits for `db` to be “healthy”, then starts `api`
+3) Starts `web` (frontend build + Nginx), then `caddy` as the public entrypoint
 
 ### Routing (Caddy)
 
-Tutto passa da `http://localhost:3000`:
+Everything goes through `http://localhost:3000`:
 
 - `GET/POST/DELETE /api/*` → `api:3001`
 - `/*` → `web:80` (Nginx + SPA)
 
 Config: [Caddyfile](./Caddyfile)
 
-### Setup iniziale
+### Initial setup
 
-1) La SPA chiama `GET /api/setup/status`
-2) Se `setupComplete=false`, mostra `/setup`
-3) `POST /api/setup/init` crea il primo utente admin in `public.users`
+1) The SPA calls `GET /api/setup/status`
+2) If `setupComplete=false`, it shows `/setup`
+3) `POST /api/setup/init` creates the first admin user in `public.users`
 
-### Autenticazione e sessioni
+### Authentication and sessions
 
 - Login: `POST /api/auth/login`
 - Logout: `POST /api/auth/logout`
-- Sessione: cookie `vf_session` (HttpOnly) + tabella `public.sessions`
-- Stato utente: `GET /api/auth/me`
+- Session: `vf_session` cookie (HttpOnly) + `public.sessions` table
+- Current user: `GET /api/auth/me`
 
-Nel frontend le chiamate API usano `credentials: 'include'` per inviare automaticamente il cookie (vedi [api.ts](./src/lib/api.ts)).
+On the frontend, API calls use `credentials: 'include'` to automatically send the cookie (see [api.ts](./src/lib/api.ts)).
 
-## Stack Docker (single-host)
+## Docker stack (single host)
 
-Lo stack è definito in [docker-compose.yml](./docker-compose.yml).
+Defined in [docker-compose.yml](./docker-compose.yml).
 
-Servizi:
+Services:
 
-- `db`: Postgres 16 + schema iniziale (mount di `./db/init.sql`)
+- `db`: Postgres 16 + initial schema (mount `./db/init.sql`)
 - `api`: Node.js (setup + auth + API)
-- `web`: build della SPA e serving statico via Nginx
-- `caddy`: reverse proxy pubblico (porta host `3000`)
+- `web`: SPA build + static serving via Nginx
+- `caddy`: public reverse proxy (host port `3000`)
 
-Persistenza:
+Persistence:
 
 - DB: `./volumes/db/data`
 
-## Variabili ambiente
+## Environment variables
 
-File runtime: `.env` (non versionato).
+Runtime file: `.env` (not committed).
 
-Generazione consigliata: `npm run env:generate` (script: [generate-env.mjs](./scripts/generate-env.mjs)).
+Recommended generation: `npm run env:generate` (script: [generate-env.mjs](./scripts/generate-env.mjs)).
 
-Chiavi:
+Keys:
 
-- `POSTGRES_PASSWORD`: password dell’utente DB `vibeflow`
-- `SESSION_SECRET`: segreto server-side per derivare hash token sessione
-- `SITE_URL`: URL pubblico (locale: `http://localhost:3000`, produzione: `https://example.com`)
+- `POSTGRES_PASSWORD`: password for DB user `vibeflow`
+- `SESSION_SECRET`: server-side secret used to derive session token hashes
+- `SITE_URL`: public URL (local: `http://localhost:3000`, production: `https://example.com`)
 
-Nota:
+Notes:
 
-- Non committare mai `.env`
-- Se cambi `POSTGRES_PASSWORD` dopo aver già avviato Postgres con volume persistente, devi fare migrazione o reset del volume
+- Never commit `.env`
+- If you change `POSTGRES_PASSWORD` after Postgres has already been started with a persistent volume, you need to migrate or reset the volume
 
-## API HTTP (contratto)
+## HTTP API (contract)
 
-Tutti gli endpoint sono sotto `/api`.
+All endpoints are under `/api`.
 
 Setup:
 
 - `GET /api/setup/status` → `{ setupComplete: boolean }`
-- `POST /api/setup/init` → crea il primo utente admin (solo se non esiste nessun utente)
+- `POST /api/setup/init` → creates the first admin user (only if no users exist yet)
 
 Auth:
 
-- `POST /api/auth/signup` → crea un utente (richiede setup completato)
-- `POST /api/auth/login` → set cookie sessione
-- `POST /api/auth/logout` → invalida sessione
+- `POST /api/auth/signup` → creates a user (requires setup to be completed)
+- `POST /api/auth/login` → sets the session cookie
+- `POST /api/auth/logout` → invalidates the session
 - `GET /api/auth/me` → `{ user: null | { id, email, is_admin, created_at, updated_at } }`
-- `POST /api/auth/change-password` → cambia password (richiede sessione)
+- `POST /api/auth/change-password` → change password (requires session)
 
 Projects:
 
-- `GET /api/projects` → `{ projects: ProjectRow[] }` (solo dell’utente loggato)
+- `GET /api/projects` → `{ projects: ProjectRow[] }` (only for the logged-in user)
 - `POST /api/projects` → `{ project: ProjectRow }`
 - `DELETE /api/projects/:id` → `{ ok: true }`
 
-## Schema DB (minimo)
+## DB schema (minimal)
 
-Definito in [db/init.sql](./db/init.sql).
+Defined in [db/init.sql](./db/init.sql).
 
-Tabelle principali:
+Main tables:
 
 - `public.users` (email, password_hash, is_admin)
 - `public.sessions` (token_hash, expires_at, user_id)
 - `public.projects` (user_id, project_name, project_scope)
 - `public.flows` (project_id, graph jsonb)
 
-## Sviluppo (senza Docker)
+## Development (without Docker)
 
 Frontend:
 
@@ -221,18 +221,18 @@ npm install
 npm run dev
 ```
 
-Note:
+Notes:
 
-- `VITE_SETUP_API_BASE_URL` (default `/api`) definisce la base per le chiamate al backend
-- in dev, `/api/*` viene proxato a `VITE_DEV_API_TARGET` (default `http://localhost:3000`) (vedi `vite.config.ts`)
+- `VITE_SETUP_API_BASE_URL` (default `/api`) defines the base URL for backend calls
+- in dev, `/api/*` is proxied to `VITE_DEV_API_TARGET` (default `http://localhost:3000`) (see `vite.config.ts`)
 
-### Scenario B (locale): Vite + API Node su `:3001` + Postgres locale
+### Scenario B (local): Vite + Node API on `:3001` + local Postgres
 
-Obiettivo: usare Vite in dev (porta 5173) e far proxare `/api/*` verso la API locale (porta 3001).
+Goal: run Vite in dev (port 5173) and proxy `/api/*` to the local API (port 3001).
 
-1) Avvia Postgres
+1) Start Postgres
 
-Opzione consigliata (DB in Docker, solo per sviluppo):
+Recommended option (DB in Docker, for development only):
 
 ```bash
 docker run --name vibeflow-db \
@@ -245,7 +245,7 @@ docker run --name vibeflow-db \
   -d postgres:16-alpine
 ```
 
-2) Avvia la API locale (porta 3001)
+2) Start the local API (port 3001)
 
 ```bash
 export NODE_ENV=development
@@ -257,27 +257,27 @@ export DATABASE_URL='postgres://vibeflow:changeme@127.0.0.1:5432/vibeflow'
 node setup-server/index.js
 ```
 
-3) Avvia Vite e imposta il proxy verso la API locale
+3) Start Vite and set the proxy to the local API
 
-In un altro terminale:
+In another terminal:
 
 ```bash
 export VITE_DEV_API_TARGET='http://127.0.0.1:3001'
 npm run dev
 ```
 
-4) Verifica rapida
+4) Quick verification
 
 ```bash
 curl -i http://127.0.0.1:3001/api/setup/status
 curl -i http://127.0.0.1:5173/api/setup/status
 ```
 
-Nota: in dev la CORS è permissiva solo verso `localhost/127.0.0.1`. In produzione viene accettato solo `SITE_URL`.
+Note: in development, CORS accepts only `localhost/127.0.0.1`. In production, only `SITE_URL` is accepted.
 
 ## VPS setup (Linux, production)
 
-1) Clona il repo e genera `.env`:
+1) Clone the repo and generate `.env`:
 
 ```bash
 git clone https://github.com/marco-ncode/vibeflow_os.git
@@ -286,13 +286,13 @@ npm ci
 npm run env:generate
 ```
 
-2) Imposta il dominio pubblico in `.env`:
+2) Set the public domain in `.env`:
 
 ```bash
 sed -i 's|^SITE_URL=.*|SITE_URL=https://example.com|' .env
 ```
 
-3) Configura Caddy per dominio + HTTPS automatico (sostituisci `:80` con il dominio):
+3) Configure Caddy for domain + automatic HTTPS (replace `:80` with your domain):
 
 ```caddyfile
 example.com {
@@ -306,7 +306,7 @@ example.com {
 }
 ```
 
-4) Esporre 80/443 e persistere cert (in `docker-compose.yml`, service `caddy`):
+4) Expose 80/443 and persist certificates (in `docker-compose.yml`, `caddy` service):
 
 ```yml
 ports:
@@ -318,7 +318,7 @@ volumes:
   - caddy_config:/config
 ```
 
-5) Avvia:
+5) Start:
 
 ```bash
 docker compose up -d --build
@@ -327,17 +327,17 @@ docker compose ps
 
 Security note:
 
-- Completa `/setup` subito dopo il bootstrap: finché non esiste un admin, l’endpoint di bootstrap è intenzionalmente pubblico.
+- Complete `/setup` immediately after the first bootstrap: until an admin exists, the bootstrap endpoint is intentionally public.
 
-## Comandi utili
+## Useful commands
 
 ```bash
 npm run lint
 npm run build
 ```
 
-## Troubleshooting rapido
+## Quick troubleshooting
 
-- Reset DB (perdita dati): `docker compose down` + cancella `./volumes/db/data` + `docker compose up -d --build`
-- Controllo log: `docker compose logs -f --tail=200 db api caddy web`
-- Setup non completato: verifica che `db/init.sql` sia stato eseguito (primo avvio con volume vuoto) e che `api` veda il DB come healthy
+- Reset DB (data loss): `docker compose down` + delete `./volumes/db/data` + `docker compose up -d --build`
+- Logs: `docker compose logs -f --tail=200 db api caddy web`
+- Setup not completed: verify that `db/init.sql` ran (first start with an empty volume) and that `api` sees DB as healthy
