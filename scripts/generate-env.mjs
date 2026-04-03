@@ -6,20 +6,6 @@ const repoRoot = process.cwd()
 const envPath = path.join(repoRoot, '.env')
 const envExamplePath = path.join(repoRoot, '.env.example')
 
-function base64Url(input) {
-  return Buffer.from(input).toString('base64url')
-}
-
-function signJwtHs256(payload, jwtSecret) {
-  const header = { alg: 'HS256', typ: 'JWT' }
-  const headerPart = base64Url(JSON.stringify(header))
-  const payloadPart = base64Url(JSON.stringify(payload))
-  const signingInput = `${headerPart}.${payloadPart}`
-  const sig = crypto.createHmac('sha256', jwtSecret).update(signingInput).digest()
-  const sigPart = Buffer.from(sig).toString('base64url')
-  return `${signingInput}.${sigPart}`
-}
-
 function randomAlnum(length) {
   const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
   let out = ''
@@ -67,30 +53,12 @@ if (fs.existsSync(envPath)) {
   process.exit(0)
 }
 
-const now = Math.floor(Date.now() / 1000)
-const fiveYears = 60 * 60 * 24 * 365 * 5
-
 const siteUrl = example.get('SITE_URL') || 'http://localhost:3000'
 const postgresPassword = randomAlnum(32)
-const jwtSecret = crypto.randomBytes(32).toString('base64')
-const secretKeyBase = crypto.randomBytes(48).toString('base64')
-
-const anonKey = signJwtHs256(
-  { role: 'anon', iss: 'supabase', iat: now, exp: now + fiveYears },
-  jwtSecret,
-)
-
-const serviceRoleKey = signJwtHs256(
-  { role: 'service_role', iss: 'supabase', iat: now, exp: now + fiveYears },
-  jwtSecret,
-)
+const sessionSecret = crypto.randomBytes(48).toString('base64')
 
 writeEnv(envPath, {
   POSTGRES_PASSWORD: postgresPassword,
-  JWT_SECRET: jwtSecret,
-  ANON_KEY: anonKey,
-  SERVICE_ROLE_KEY: serviceRoleKey,
-  SECRET_KEY_BASE: secretKeyBase,
+  SESSION_SECRET: sessionSecret,
   SITE_URL: siteUrl,
 })
-

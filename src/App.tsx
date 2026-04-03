@@ -8,9 +8,8 @@ import Login from './pages/Login.tsx'
 import Setup from './pages/Setup.tsx'
 import Projects from './pages/Projects.tsx'
 import Account from './pages/Account.tsx'
-import { supabase } from './lib/supabase'
 import { getSetupStatus } from './lib/setupApi'
-import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
+import { authMe } from './lib/api'
 
 function Navbar({
   theme,
@@ -74,17 +73,20 @@ function App() {
   }, [])
 
   useEffect(() => {
-    let unsub: (() => void) | null = null
+    let cancelled = false
     ;(async () => {
-      const { data } = await supabase.auth.getSession()
-      setIsAuthed(Boolean(data.session))
-      setSessionReady(true)
-      const { data: sub } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, nextSession: Session | null) => {
-        setIsAuthed(Boolean(nextSession))
-      })
-      unsub = () => sub.subscription.unsubscribe()
+      try {
+        const { user } = await authMe()
+        if (cancelled) return
+        setIsAuthed(Boolean(user))
+      } catch {
+        if (cancelled) return
+        setIsAuthed(false)
+      } finally {
+        if (!cancelled) setSessionReady(true)
+      }
     })()
-    return () => { unsub?.() }
+    return () => { cancelled = true }
   }, [])
 
   if (setupComplete === null || !sessionReady) {

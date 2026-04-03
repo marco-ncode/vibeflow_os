@@ -1,10 +1,6 @@
 :80 {
-  handle_path /supabase/* {
-    reverse_proxy kong:8000
-  }
-
   handle /api/* {
-    reverse_proxy setup:3001
+    reverse_proxy api:3001
   }
 
   handle {
