@@ -487,6 +487,40 @@ const server = http.createServer(async (req, res) => {
       return
     }
 
+    if (req.method === 'PUT' && /^\/api\/projects\/\d+$/.test(url.pathname)) {
+      const user = await authFromRequest(req)
+      if (!user) {
+        sendJson(req, res, 401, { error: 'unauthorized' })
+        return
+      }
+
+      const id = Number(url.pathname.split('/').pop())
+      if (!Number.isFinite(id)) {
+        sendJson(req, res, 400, { error: 'invalid_input' })
+        return
+      }
+
+      const body = await readJson(req)
+      const projectName = String(body?.project_name ?? '').trim()
+      const projectScope = String(body?.project_scope ?? '').trim()
+      if (!projectName) {
+        sendJson(req, res, 400, { error: 'invalid_input' })
+        return
+      }
+
+      const { rows } = await pool.query(
+        'update public.projects set project_name = $1, project_scope = $2 where id = $3 and user_id = $4 returning id, project_name, project_scope, created_at, updated_at',
+        [projectName, projectScope || null, id, user.id],
+      )
+      const project = rows?.[0] ?? null
+      if (!project) {
+        sendJson(req, res, 404, { error: 'not_found' })
+        return
+      }
+      sendJson(req, res, 200, { project })
+      return
+    }
+
     if (req.method === 'DELETE' && /^\/api\/projects\/\d+$/.test(url.pathname)) {
       const user = await authFromRequest(req)
       if (!user) {

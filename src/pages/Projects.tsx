@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { createFlow, createProject, deleteProject, listFlows, listProjects, type FlowRow, type ProjectRow } from '../lib/api'
+import { createFlow, createProject, deleteProject, listFlows, listProjects, updateProject, type FlowRow, type ProjectRow } from '../lib/api'
 
 function Projects() {
   const [projects, setProjects] = useState<ProjectRow[]>([])
@@ -11,14 +11,17 @@ function Projects() {
   const [flows, setFlows] = useState<FlowRow[]>([])
   const [flowsLoading, setFlowsLoading] = useState(false)
 
-  const [name, setName] = useState('')
-  const [scope, setScope] = useState('')
-  const [creating, setCreating] = useState(false)
+  const [projectModalOpen, setProjectModalOpen] = useState(false)
+  const [projectModalMode, setProjectModalMode] = useState<'create' | 'edit'>('create')
+  const [projectDraftId, setProjectDraftId] = useState<number | null>(null)
+  const [projectDraftName, setProjectDraftName] = useState('')
+  const [projectDraftScope, setProjectDraftScope] = useState('')
+  const [savingProject, setSavingProject] = useState(false)
 
   const [newFlowName, setNewFlowName] = useState('')
   const [creatingFlow, setCreatingFlow] = useState(false)
 
-  const canCreate = useMemo(() => name.trim().length > 0 && !creating, [name, creating])
+  const canSaveProject = useMemo(() => projectDraftName.trim().length > 0 && !savingProject, [projectDraftName, savingProject])
   const canCreateFlow = useMemo(() => !creatingFlow && selectedProjectId != null, [creatingFlow, selectedProjectId])
 
   const selectedProject = useMemo(() => {
@@ -39,6 +42,27 @@ function Projects() {
       setLoading(false)
     }
   }, [])
+
+  const openCreateProjectModal = useCallback(() => {
+    setProjectModalMode('create')
+    setProjectDraftId(null)
+    setProjectDraftName('')
+    setProjectDraftScope('')
+    setProjectModalOpen(true)
+  }, [])
+
+  const openEditProjectModal = useCallback((p: ProjectRow) => {
+    setProjectModalMode('edit')
+    setProjectDraftId(p.id)
+    setProjectDraftName(p.project_name ?? '')
+    setProjectDraftScope(p.project_scope ?? '')
+    setProjectModalOpen(true)
+  }, [])
+
+  const closeProjectModal = useCallback(() => {
+    if (savingProject) return
+    setProjectModalOpen(false)
+  }, [savingProject])
 
   const loadFlows = useCallback(async (projectId: number) => {
     setFlowsLoading(true)
@@ -75,24 +99,30 @@ function Projects() {
     void loadFlows(selectedProjectId)
   }, [selectedProjectId, loadFlows])
 
-  async function onCreate() {
-    if (!canCreate) return
-    setCreating(true)
+  async function onSaveProject() {
+    if (!canSaveProject) return
+    setSavingProject(true)
     setError(null)
+    const nextName = projectDraftName.trim()
+    const nextScope = projectDraftScope.trim().length ? projectDraftScope.trim() : null
     try {
-      const data = await createProject({
-        project_name: name.trim(),
-        project_scope: scope.trim().length ? scope.trim() : null,
-      })
-      setProjects((prev) => [data, ...prev])
-      setName('')
-      setScope('')
+      if (projectModalMode === 'create') {
+        const data = await createProject({ project_name: nextName, project_scope: nextScope })
+        setProjects((prev) => [data, ...prev])
+        setSelectedProjectId(data.id)
+        setProjectModalOpen(false)
+      } else {
+        if (projectDraftId == null) return
+        const data = await updateProject(projectDraftId, { project_name: nextName, project_scope: nextScope })
+        setProjects((prev) => prev.map((p) => (p.id === data.id ? data : p)))
+        setProjectModalOpen(false)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unexpected error')
-      setCreating(false)
+      setSavingProject(false)
       return
     } finally {
-      setCreating(false)
+      setSavingProject(false)
     }
   }
 
@@ -128,14 +158,53 @@ function Projects() {
     }
   }
 
+  const PencilIcon = (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  )
+
+  const TrashIcon = (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </svg>
+  )
+
+  const PlusIcon = (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  )
+
+  const GridIcon = (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 4h7v7H4z" />
+      <path d="M13 4h7v7h-7z" />
+      <path d="M4 13h7v7H4z" />
+      <path d="M13 13h7v7h-7z" />
+    </svg>
+  )
+
   return (
     <div className="projects-shell">
       <div className="projects-grid">
         <aside className="projects-sidebar">
           <div className="projects-sidebar-head">
-            <div className="projects-sidebar-title">Projects</div>
-            <button className="btn" onClick={() => void loadProjects()} disabled={loading}>
-              Refresh
+            <div className="projects-brand">
+              <span className="projects-brand-title">VibeFlow OS</span>
+              <span className="projects-brand-caret">▾</span>
+            </div>
+            <button className="icon-btn" type="button" onClick={() => void loadProjects()} aria-label="Refresh projects" disabled={loading}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M21 12a9 9 0 1 1-3-6.7" />
+                <path d="M21 3v7h-7" />
+              </svg>
             </button>
           </div>
 
@@ -144,43 +213,50 @@ function Projects() {
           {loading ? (
             <div className="projects-muted">Loading…</div>
           ) : (
-            <div className="projects-list">
+            <div className="projects-nav">
+              <button type="button" className="projects-nav-item create" onClick={openCreateProjectModal}>
+                <span className="projects-nav-icon">{PlusIcon}</span>
+                <span className="projects-nav-label">Create New</span>
+              </button>
+
+              <div className="projects-nav-divider" />
+
               {projects.length === 0 ? (
-                <div className="projects-muted">No projects yet</div>
+                <div className="projects-muted" style={{ padding: '6px 10px' }}>No projects yet</div>
               ) : (
                 projects.map((p) => (
-                  <div key={p.id} className="project-row">
+                  <div key={p.id} className={`projects-project-row ${selectedProjectId === p.id ? 'active' : ''}`}>
                     <button
                       type="button"
-                      className={`project-select ${selectedProjectId === p.id ? 'active' : ''}`}
+                      className="projects-project-select"
                       onClick={() => setSelectedProjectId(p.id)}
                     >
-                      <div className="project-name">{p.project_name ?? 'Untitled'}</div>
-                      {p.project_scope && <div className="project-scope">{p.project_scope}</div>}
+                      <span className="projects-nav-icon">{GridIcon}</span>
+                      <span className="projects-nav-label">{p.project_name ?? 'Untitled'}</span>
                     </button>
-                    <button className="btn danger project-delete" type="button" onClick={() => void onDelete(p.id)}>
-                      Delete
-                    </button>
+                    <div className="projects-project-actions">
+                      <button
+                        type="button"
+                        className="icon-btn subtle"
+                        onClick={() => openEditProjectModal(p)}
+                        aria-label={`Edit ${p.project_name ?? 'project'}`}
+                      >
+                        {PencilIcon}
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-btn subtle danger"
+                        onClick={() => void onDelete(p.id)}
+                        aria-label={`Delete ${p.project_name ?? 'project'}`}
+                      >
+                        {TrashIcon}
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
             </div>
           )}
-
-          <div className="projects-divider" />
-
-          <div className="projects-sidebar-title">New project</div>
-          <div className="field">
-            <label>Project name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Demo" />
-          </div>
-          <div className="field">
-            <label>Scope</label>
-            <textarea value={scope} onChange={(e) => setScope(e.target.value)} placeholder="Description / scope" rows={5} />
-          </div>
-          <button className="btn primary" onClick={() => void onCreate()} disabled={!canCreate}>
-            Create
-          </button>
         </aside>
 
         <main className="projects-main">
@@ -238,6 +314,40 @@ function Projects() {
           </section>
         </main>
       </div>
+
+      {projectModalOpen && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" onMouseDown={(e) => { if (e.target === e.currentTarget) closeProjectModal() }}>
+          <div className="modal-card" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <div className="modal-title">{projectModalMode === 'create' ? 'Create project' : 'Edit project'}</div>
+              <button type="button" className="icon-btn" onClick={closeProjectModal} aria-label="Close">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M18 6 6 18" />
+                  <path d="M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="field">
+                <label>Name</label>
+                <input value={projectDraftName} onChange={(e) => setProjectDraftName(e.target.value)} placeholder="e.g. My Project" />
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label>Description</label>
+                <textarea value={projectDraftScope} onChange={(e) => setProjectDraftScope(e.target.value)} placeholder="Optional description" rows={5} />
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button type="button" className="btn" onClick={closeProjectModal} disabled={savingProject}>Cancel</button>
+              <button type="button" className="btn primary" onClick={() => void onSaveProject()} disabled={!canSaveProject}>
+                {projectModalMode === 'create' ? 'Create' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -68,6 +68,11 @@ export async function createProject(input: { project_name: string, project_scope
   return res.project
 }
 
+export async function updateProject(id: number, input: { project_name: string, project_scope: string | null }): Promise<ProjectRow> {
+  const res = await apiFetch<{ project: ProjectRow }>(`/projects/${id}`, { method: 'PUT', body: JSON.stringify(input) })
+  return res.project
+}
+
 export async function deleteProject(id: number): Promise<void> {
   await apiFetch<{ ok: true }>(`/projects/${id}`, { method: 'DELETE' })
 }
