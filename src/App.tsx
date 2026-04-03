@@ -29,7 +29,6 @@ function Navbar({
           <>
             <NavLink to="/projects" className={({ isActive }) => isActive ? 'active' : ''}>Progetti</NavLink>
             <NavLink to="/editor" className={({ isActive }) => isActive ? 'active' : ''}>Editor</NavLink>
-            <NavLink to="/account" className={({ isActive }) => isActive ? 'active' : ''}>Account</NavLink>
           </>
         )}
         <div className="theme-toggle" role="group" aria-label="Theme">
