@@ -48,6 +48,10 @@ body {
 .navbar .links a.active { color: var(--text); }
 .navbar .theme-label { margin-left: 16px; color: var(--muted); font-size: 12px; }
 .navbar .theme-select { margin-left: 8px; background: var(--surface); color: var(--text); border: 1px solid var(--border-soft); border-radius: 6px; padding: 6px 8px; }
+.navbar .theme-toggle { margin-left: 16px; display: inline-flex; gap: 6px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: color-mix(in oklab, var(--surface) 70%, transparent); }
+.navbar .theme-toggle-btn { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 700; }
+.navbar .theme-toggle-btn:hover { background: var(--hover-surface); color: var(--text); }
+.navbar .theme-toggle-btn.active { background: color-mix(in oklab, var(--panel) 72%, var(--surface)); border-color: color-mix(in oklab, var(--border) 70%, transparent); color: var(--text); }
 
 .container { padding: 24px; max-width: 1024px; margin: 0 auto; }
 .hero { text-align: center; padding: 40px 0; }
@@ -512,6 +516,10 @@ body {
 .flows-list {
   display: grid;
   gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(2, 6, 23, 0.35);
 }
 
 .flow-item {
