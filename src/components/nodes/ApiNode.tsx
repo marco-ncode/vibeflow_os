@@ -14,7 +14,7 @@ function ApiNode({ id, data }: NodeProps) {
     : []
   return (
     <div className="node api">
-      <div className="node-title"><span className="icon">🔗</span> API Call <button className="toggle" onClick={() => updateNodeData(id, { showDescription: !data?.showDescription })}>{data?.showDescription ? 'Nascondi' : 'Mostra'}</button></div>
+      <div className="node-title"><span className="icon">🔗</span> API Call <button className="toggle" onClick={() => updateNodeData(id, { showDescription: !data?.showDescription })}>{data?.showDescription ? 'Hide' : 'Show'}</button></div>
       <div className="node-body">
         <div className="label">{data?.label ?? 'API Node'}</div>
         {data?.description && data?.showDescription !== false && (

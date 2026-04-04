@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import ReactFlow, { Background, Controls, addEdge, MiniMap, applyNodeChanges, applyEdgeChanges } from 'reactflow'
 import type { Connection, Edge, Node, OnConnect, NodeChange, EdgeChange } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { useGraphStore } from '../store/graphStore'
 import { useSearchParams } from 'react-router-dom'
-import { getFlow } from '../lib/api'
+import { getFlow, updateFlow } from '../lib/api'
 import PromptNode from '../components/nodes/PromptNode'
 import TransformNode from '../components/nodes/TransformNode'
 import IONode from '../components/nodes/IONode'
@@ -17,6 +17,9 @@ import NodePalette from '../components/NodePalette'
 
 function Editor() {
   const [searchParams] = useSearchParams()
+  const rawFlowId = searchParams.get('flowId')
+  const flowId = rawFlowId ? Number(rawFlowId) : null
+  const activeFlowId = (flowId && Number.isFinite(flowId)) ? flowId : null
   const nodes = useGraphStore((s) => s.nodes)
   const edges = useGraphStore((s) => s.edges)
   const setNodes = useGraphStore((s) => s.setNodes)
@@ -58,19 +61,63 @@ function Editor() {
 
   const [showMenu, setShowMenu] = useState(false)
 
+  const latestGraphRef = useRef<{ nodes: Node[], edges: Edge[] }>({ nodes: [], edges: [] })
+  const lastSavedGraphRef = useRef<string | null>(null)
+  const savingRef = useRef(false)
+  const needsSaveRef = useRef(false)
+  const saveTimerRef = useRef<number | null>(null)
+
   useEffect(() => {
-    const raw = searchParams.get('flowId')
-    const flowId = raw ? Number(raw) : null
-    if (!flowId || !Number.isFinite(flowId)) return
+    latestGraphRef.current = { nodes, edges }
+  }, [nodes, edges])
+
+  const saveGraph = useCallback(async (graph: { nodes: Node[], edges: Edge[] }) => {
+    if (activeFlowId == null) return
+    const serialized = JSON.stringify(graph)
+    if (serialized === lastSavedGraphRef.current) return
+
+    if (savingRef.current) {
+      needsSaveRef.current = true
+      return
+    }
+
+    savingRef.current = true
+    try {
+      await updateFlow(activeFlowId, { graph })
+      lastSavedGraphRef.current = serialized
+    } catch {
+      void 0
+    } finally {
+      savingRef.current = false
+      if (needsSaveRef.current) {
+        needsSaveRef.current = false
+        void saveGraph(latestGraphRef.current)
+      }
+    }
+  }, [activeFlowId])
+
+  const scheduleSave = useCallback(() => {
+    if (activeFlowId == null) return
+    if (saveTimerRef.current != null) window.clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = window.setTimeout(() => {
+      saveTimerRef.current = null
+      void saveGraph(latestGraphRef.current)
+    }, 500)
+  }, [activeFlowId, saveGraph])
+
+  useEffect(() => {
+    if (activeFlowId == null) return
 
     let cancelled = false
     ;(async () => {
       try {
-        const flow = await getFlow(flowId)
+        const flow = await getFlow(activeFlowId)
         if (cancelled) return
         const graph = (flow?.graph && typeof flow.graph === 'object') ? flow.graph as { nodes?: Node[], edges?: Edge[] } : null
         const nextNodes = Array.isArray(graph?.nodes) ? graph?.nodes : []
         const nextEdges = Array.isArray(graph?.edges) ? graph?.edges : []
+        lastSavedGraphRef.current = JSON.stringify({ nodes: nextNodes, edges: nextEdges })
+        latestGraphRef.current = { nodes: nextNodes, edges: nextEdges }
         reset()
         setNodes(nextNodes)
         setEdges(nextEdges)
@@ -81,7 +128,22 @@ function Editor() {
     })()
 
     return () => { cancelled = true }
-  }, [searchParams, reset, setNodes, setEdges, setSelectedNodeId])
+  }, [activeFlowId, reset, setNodes, setEdges, setSelectedNodeId])
+
+  useEffect(() => {
+    if (activeFlowId == null) return
+    scheduleSave()
+  }, [activeFlowId, nodes, edges, scheduleSave])
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current != null) {
+        window.clearTimeout(saveTimerRef.current)
+        saveTimerRef.current = null
+      }
+      void saveGraph(latestGraphRef.current)
+    }
+  }, [saveGraph])
 
   const downloadFile = (filename: string, content: string, type = 'text/plain') => {
     const blob = new Blob([content], { type })
