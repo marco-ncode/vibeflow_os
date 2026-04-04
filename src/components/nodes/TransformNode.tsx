@@ -14,7 +14,7 @@ function TransformNode({ id, data }: NodeProps) {
     : []
   return (
     <div className="node transform">
-      <div className="node-title"><span className="icon">🔧</span> Transform <button className="toggle" onClick={() => updateNodeData(id, { showDescription: !data?.showDescription })}>{data?.showDescription ? 'Nascondi' : 'Mostra'}</button></div>
+      <div className="node-title"><span className="icon">🔧</span> Transform <button className="toggle" onClick={() => updateNodeData(id, { showDescription: !data?.showDescription })}>{data?.showDescription ? 'Hide' : 'Show'}</button></div>
       <div className="node-body">
         <div className="label">{data?.label ?? 'Transform Node'}</div>
         {data?.description && data?.showDescription !== false && (
