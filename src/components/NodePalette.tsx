@@ -5,15 +5,15 @@ function NodePalette() {
 
   return (
     <div className="sidebar">
-      <h4>Palette</h4>
-      <button className="btn" onClick={() => addNodeOfType('prompt')}>Aggiungi Prompt</button>
-      <button className="btn" onClick={() => addNodeOfType('transform')}>Aggiungi Transform</button>
-      <button className="btn" onClick={() => addNodeOfType('io', { direction: 'input' })}>Aggiungi Input</button>
-      <button className="btn" onClick={() => addNodeOfType('io', { direction: 'output' })}>Aggiungi Output</button>
-      <button className="btn" onClick={() => addNodeOfType('decision')}>Aggiungi Decision</button>
-      <button className="btn" onClick={() => addNodeOfType('api')}>Aggiungi API</button>
-      <button className="btn" onClick={() => addNodeOfType('storage')}>Aggiungi Storage</button>
-      <button className="btn" onClick={() => addNodeOfType('table')}>Aggiungi Tabella</button>
+      <h4>Items</h4>
+      <button className="btn" onClick={() => addNodeOfType('prompt')}>Add Prompt</button>
+      <button className="btn" onClick={() => addNodeOfType('transform')}>Add Transform</button>
+      <button className="btn" onClick={() => addNodeOfType('io', { direction: 'input' })}>Add Input</button>
+      <button className="btn" onClick={() => addNodeOfType('io', { direction: 'output' })}>Add Output</button>
+      <button className="btn" onClick={() => addNodeOfType('decision')}>Add Decision</button>
+      <button className="btn" onClick={() => addNodeOfType('api')}>Add API</button>
+      <button className="btn" onClick={() => addNodeOfType('storage')}>Add Storage</button>
+      <button className="btn" onClick={() => addNodeOfType('table')}>Add Table</button>
     </div>
   )
 }
